@@ -1,6 +1,7 @@
 package com.project.monu.domain.article.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -14,6 +15,7 @@ import java.util.UUID;
                 @UniqueConstraint(name = "uk_article_source_url", columnNames = "source_url")
         }
 )
+@Getter
 public class Article {
 
     // 기사 식별자

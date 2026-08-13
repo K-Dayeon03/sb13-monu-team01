@@ -1,6 +1,7 @@
 package com.project.monu.domain.article.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
@@ -14,6 +15,7 @@ import java.util.UUID;
                 @UniqueConstraint(name = "uk_article_backup_s3_key", columnNames = "s3_key")
         }
 )
+@Getter
 public class ArticleBackup {
 
     // 백업 이력 식별자

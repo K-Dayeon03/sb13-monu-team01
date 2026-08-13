@@ -1,6 +1,7 @@
 package com.project.monu.domain.article.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
@@ -9,6 +10,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "article_restores")
+@Getter
 public class ArticleRestore {
 
     // 복구 이력 식별자
