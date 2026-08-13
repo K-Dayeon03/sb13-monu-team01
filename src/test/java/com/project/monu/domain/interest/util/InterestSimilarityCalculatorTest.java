@@ -16,8 +16,9 @@ class InterestSimilarityCalculatorTest {
 
     @ParameterizedTest
     @CsvSource({
-            "스포츠, 스포오츠, true",
+            "국내여행정보, 국내여행정부, true",
             "스포츠, 경제, false"
+
     })
     void 유사도가_80퍼센트_이상이면_유사하다고_판단한다(String a, String b, boolean expected) {
         boolean result = InterestSimilarityCalculator.isSimilar(a, b);
