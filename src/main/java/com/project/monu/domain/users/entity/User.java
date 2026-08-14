@@ -4,6 +4,7 @@ import com.project.monu.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,6 +23,9 @@ public class User extends BaseEntity {
 
   @Column(nullable = false, length = 255)
   private String password;
+
+  @Column
+  private Instant deletedAt;
 
   @Builder
   public User(String email, String nickname, String password) {
