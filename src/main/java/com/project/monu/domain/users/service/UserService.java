@@ -14,6 +14,11 @@ public class UserService {
   }
 
   public UserResponse create(UserCreateRequest request) {
+
+    if (userRepository.existsByEmail(request.email())) {
+      throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
+    }
+
     User user = User.builder()
         .email(request.email())
         .nickname(request.nickname())
