@@ -7,6 +7,7 @@ import com.project.monu.domain.users.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -39,5 +40,19 @@ class UserServiceTest {
     assertThat(response.nickname()).isEqualTo("테스트");
 
     verify(userRepository).save(any(User.class));
+  }
+
+  @Test
+  void 이미_존재하는_이메일로_회원가입할_수_없다() {
+    UserCreateRequest request = new UserCreateRequest(
+        "test@test.com",
+        "새로운사용자",
+        "password123!"
+    );
+
+    when(userRepository.existsByEmail(request.email())).thenReturn(true);
+
+    assertThatThrownBy(() -> userService.create(request))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 }
