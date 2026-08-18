@@ -46,4 +46,20 @@ class UserCreateRequestTest {
 
     assertThat(violations).isNotEmpty();
   }
+
+  @Test
+  void 닉네임이_10자를_초과하면_검증에_실패한다() {
+    Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+
+    UserCreateRequest request = new UserCreateRequest(
+        "test@test.com",
+        "12345678901",
+        "password123!"
+    );
+
+    Set<ConstraintViolation<UserCreateRequest>> violations =
+        validator.validate(request);
+
+    assertThat(violations).isNotEmpty();
+  }
 }
