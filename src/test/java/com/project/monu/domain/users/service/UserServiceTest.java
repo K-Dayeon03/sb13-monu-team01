@@ -4,6 +4,7 @@ import com.project.monu.domain.users.dto.request.UserCreateRequest;
 import com.project.monu.domain.users.dto.response.UserResponse;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
+import com.project.monu.global.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,6 +54,7 @@ class UserServiceTest {
     when(userRepository.existsByEmail(request.email())).thenReturn(true);
 
     assertThatThrownBy(() -> userService.create(request))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("이미 존재하는 이메일입니다.");
   }
 }

@@ -4,6 +4,8 @@ import com.project.monu.domain.users.dto.request.UserCreateRequest;
 import com.project.monu.domain.users.dto.response.UserResponse;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
+import com.project.monu.global.exception.BusinessException;
+import com.project.monu.global.exception.ErrorCode;
 
 public class UserService {
 
@@ -16,7 +18,7 @@ public class UserService {
   public UserResponse create(UserCreateRequest request) {
 
     if (userRepository.existsByEmail(request.email())) {
-      throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
+      throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
     }
 
     User user = User.builder()
