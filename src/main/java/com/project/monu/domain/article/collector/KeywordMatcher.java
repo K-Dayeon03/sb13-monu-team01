@@ -2,10 +2,12 @@ package com.project.monu.domain.article.collector;
 
 import com.project.monu.domain.article.collector.dto.CollectedArticle;
 import com.project.monu.domain.article.collector.naver.dto.InterestKeywords;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.UUID;
 
+@Component
 public class KeywordMatcher {
 
     public boolean containsKeyword(CollectedArticle article, String keyword) {

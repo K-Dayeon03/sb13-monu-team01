@@ -1,7 +1,10 @@
 package com.project.monu.domain.article.entity;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.Instant;
@@ -15,6 +18,7 @@ import java.util.UUID;
         }
 )
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Article {
 
     // 기사 식별자
@@ -63,5 +67,16 @@ public class Article {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Builder
+    public Article(ArticleSource source, String sourceUrl, String title,
+                   Instant publishDate, String summary) {
+        this.source = source;
+        this.sourceUrl = sourceUrl;
+        this.title = title;
+        this.publishDate = publishDate;
+        this.summary = summary;
+        this.commentCount = 0L;
+        this.viewCount = 0L;
+    }
 
 }
