@@ -1,4 +1,4 @@
-package com.project.monu.domain.article.dto;
+package com.project.monu.global.dto;
 
 import java.time.Instant;
 import java.util.List;
