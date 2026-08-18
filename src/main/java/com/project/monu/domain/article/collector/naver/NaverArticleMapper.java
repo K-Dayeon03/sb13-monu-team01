@@ -2,6 +2,7 @@ package com.project.monu.domain.article.collector.naver;
 
 import com.project.monu.domain.article.collector.dto.CollectedArticle;
 import com.project.monu.domain.article.collector.naver.dto.NaverNewsResponse;
+import org.springframework.stereotype.Component;
 import org.springframework.web.util.HtmlUtils;
 
 import java.time.Instant;
@@ -9,6 +10,7 @@ import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
+@Component
 public class NaverArticleMapper {
 
     public CollectedArticle toCollectedArticle(NaverNewsResponse.Item item) {
