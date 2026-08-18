@@ -25,6 +25,9 @@ public record CursorPageResponse<T>(
         boolean hasNext
 ) {
 
+    /**
+     * 커서 페이지 응답을 만들 때 생성자 대신 사용할 수 있는 정적 팩토리 메서드입니다.
+     */
     public static <T> CursorPageResponse<T> of(
             List<T> content,
             String nextCursor,
