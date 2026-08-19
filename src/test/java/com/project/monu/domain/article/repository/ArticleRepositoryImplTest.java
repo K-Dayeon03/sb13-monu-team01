@@ -149,14 +149,14 @@ class ArticleRepositoryImplTest {
         // given
         ArticleSource source = source("NAVER");
         Interest interest = Interest.create("관심사");
-        Interest otherInterestId = Interest.create("다른관심사");
+        Interest otherInterest = Interest.create("다른관심사");
         em.persist(interest);
-        em.persist(otherInterestId);
+        em.persist(otherInterest);
 
         Article matchedArticle = article(source, "관심사 매칭 기사", "요약", "2026-08-18T00:00:00Z", 1L, 10L);
         Article otherArticle = article(source, "다른 관심사 기사", "요약", "2026-08-17T00:00:00Z", 1L, 10L);
         articleInterest(matchedArticle, interest);
-        articleInterest(otherArticle, otherInterestId);
+        articleInterest(otherArticle, otherInterest);
         flushAndClear();
 
         ArticleSearchCondition condition = condition(
