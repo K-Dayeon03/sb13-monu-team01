@@ -375,14 +375,16 @@ class ArticleRepositoryImplTest {
             Long commentCount,
             Long viewCount
     ) {
-        Article article = new Article();
+        Article article = Article.builder()
+                .source(source)
+                .sourceUrl("https://example.com/articles/" + title)
+                .title(title)
+                .publishDate(Instant.parse(publishDate))
+                .summary(summary)
+                .build();
 
-        // Article은 setter가 없으므로 테스트에서만 ReflectionTestUtils로 필드를 채웁니다.
-        ReflectionTestUtils.setField(article, "source", source);
-        ReflectionTestUtils.setField(article, "sourceUrl", "https://example.com/articles/" + title);
-        ReflectionTestUtils.setField(article, "title", title);
-        ReflectionTestUtils.setField(article, "summary", summary);
-        ReflectionTestUtils.setField(article, "publishDate", Instant.parse(publishDate));
+        // Article builder는 통계값을 기본 0으로 만들기 때문에,
+        // 정렬 테스트에 필요한 댓글 수/조회 수만 테스트에서 직접 채웁니다.
         ReflectionTestUtils.setField(article, "commentCount", commentCount);
         ReflectionTestUtils.setField(article, "viewCount", viewCount);
 

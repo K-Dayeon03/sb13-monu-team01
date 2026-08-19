@@ -1,13 +1,13 @@
 package com.project.monu.domain.article.service;
 
 import com.project.monu.domain.article.dto.ArticleDto;
-import com.project.monu.domain.article.dto.CursorPageResponse;
 import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
 import com.project.monu.domain.article.dto.request.ArticleSortType;
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.entity.ArticleSource;
 import com.project.monu.domain.article.repository.ArticleRepository;
 import com.project.monu.domain.article.repository.ArticleViewRepository;
+import com.project.monu.global.dto.CursorPageResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;

@@ -1,10 +1,10 @@
 package com.project.monu.domain.article.controller;
 
 import com.project.monu.domain.article.dto.ArticleDto;
-import com.project.monu.domain.article.dto.CursorPageResponse;
 import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
 import com.project.monu.domain.article.dto.request.ArticleSortType;
 import com.project.monu.domain.article.service.ArticleService;
+import com.project.monu.global.dto.CursorPageResponse;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
