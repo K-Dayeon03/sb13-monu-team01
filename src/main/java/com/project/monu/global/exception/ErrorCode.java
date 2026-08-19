@@ -10,14 +10,21 @@ public enum ErrorCode {
    */
   EMAIL_ALREADY_EXISTS(
       HttpStatus.CONFLICT,
+      "EMAIL_DUPLICATION",
       "이미 존재하는 이메일입니다."
   );
 
   private final HttpStatus status;
+  private final String code;
   private final String message;
 
-  ErrorCode(HttpStatus status, String message) {
+  ErrorCode(
+      HttpStatus status,
+      String code,
+      String message
+  ) {
     this.status = status;
+    this.code = code;
     this.message = message;
   }
 
@@ -25,11 +32,11 @@ public enum ErrorCode {
     return status;
   }
 
+  public String getCode() {
+    return code;
+  }
+
   public String getMessage() {
     return message;
   }
-
-
-
-
 }

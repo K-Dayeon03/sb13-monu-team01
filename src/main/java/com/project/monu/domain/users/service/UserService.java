@@ -6,7 +6,9 @@ import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.exception.BusinessException;
 import com.project.monu.global.exception.ErrorCode;
+import org.springframework.stereotype.Service;
 
+@Service
 public class UserService {
 
   private final UserRepository userRepository;
