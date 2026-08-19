@@ -22,6 +22,7 @@ repositories {
 dependencies {
 
     // Spring Web
+    implementation 'org.springframework.boot:spring-boot-starter-jackson'
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 
     // Bean Validation
@@ -57,6 +58,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-data-jpa-test'
     testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
 }
 
 tasks.named('test') {
