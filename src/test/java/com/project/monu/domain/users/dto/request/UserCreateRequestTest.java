@@ -20,19 +20,7 @@ class UserCreateRequestTest {
     validator = Validation.buildDefaultValidatorFactory().getValidator();
   }
 
-  @Test
-  void 잘못된_이메일_형식은_검증에_실패한다() {
-    UserCreateRequest request = new UserCreateRequest(
-        "잘못된이메일",
-        "테스트",
-        "password123!"
-    );
-
-    var violations = validator.validate(request);
-
-    assertThat(violations).isNotEmpty();
-  }
-
+  // nickname test
   @Test
   void 닉네임이_없으면_검증에_실패한다() {
     Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
@@ -61,6 +49,20 @@ class UserCreateRequestTest {
 
     Set<ConstraintViolation<UserCreateRequest>> violations =
         validator.validate(request);
+
+    assertThat(violations).isNotEmpty();
+  }
+
+  // email test
+  @Test
+  void 잘못된_이메일_형식은_검증에_실패한다() {
+    UserCreateRequest request = new UserCreateRequest(
+        "잘못된이메일",
+        "테스트",
+        "password123!"
+    );
+
+    var violations = validator.validate(request);
 
     assertThat(violations).isNotEmpty();
   }
