@@ -7,6 +7,8 @@ import com.project.monu.domain.article.entity.SourceType;
 import com.project.monu.domain.article.repository.ArticleInterestRepository;
 import com.project.monu.domain.article.repository.ArticleRepository;
 import com.project.monu.domain.article.repository.ArticleSourceRepository;
+import com.project.monu.domain.interest.entity.Interest;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +34,8 @@ class ArticleCollectServiceTest {
     private ArticleSourceRepository articleSourceRepository;
     @Mock
     private ArticleInterestRepository articleInterestRepository;
+    @Mock
+    private EntityManager entityManager;
 
     @InjectMocks
     private ArticleCollectService articleCollectService;
@@ -93,13 +97,28 @@ class ArticleCollectServiceTest {
                 .build();
         when(articleSourceRepository.findByName("NAVER"))
                 .thenReturn(Optional.of(naverSource));
-        List<UUID> matchedInterestIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+
+        // id별로 다른 Interest 반환
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        Interest interest1 = mock(Interest.class);
+        Interest interest2 = mock(Interest.class);
+        when(entityManager.getReference(Interest.class, id1)).thenReturn(interest1);
+        when(entityManager.getReference(Interest.class, id2)).thenReturn(interest2);
+
+        List<UUID> matchedInterestIds = List.of(id1, id2);
 
         // when
         articleCollectService.save(article, matchedInterestIds);
     
         // then
+        // 각 id별로 getReference가 호출됐는지 검증
+        verify(entityManager).getReference(Interest.class, id1);
+        verify(entityManager).getReference(Interest.class, id2);
+
+        // ArticleInterest가 2번 저장됐는지
         verify(articleInterestRepository, times(2)).save(any());
+
     }
     
 

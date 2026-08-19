@@ -8,6 +8,8 @@ import com.project.monu.domain.article.entity.ArticleSource;
 import com.project.monu.domain.article.repository.ArticleInterestRepository;
 import com.project.monu.domain.article.repository.ArticleRepository;
 import com.project.monu.domain.article.repository.ArticleSourceRepository;
+import jakarta.persistence.EntityManager;
+import com.project.monu.domain.interest.entity.Interest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,7 @@ public class ArticleCollectService {
     private final ArticleSourceRepository articleSourceRepository;
     private final ArticleInterestRepository articleInterestRepository;
     private final KeywordMatcher keywordMatcher;
+    private final EntityManager entityManager;
 
     public void save(CollectedArticle article, List<UUID> matchedInterestIds) {
         // 중복이면 저장하지 않음
@@ -50,9 +53,10 @@ public class ArticleCollectService {
 
         // 관심사 매칭 기록
         for (UUID interestId : matchedInterestIds) {
+            Interest interest = entityManager.getReference(Interest.class, interestId);
             ArticleInterest articleInterest = ArticleInterest.builder()
                     .article(newArticle)
-                    .interestId(interestId)
+                    .interest(interest)
                     .build();
             articleInterestRepository.save(articleInterest);
         }

@@ -157,7 +157,7 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
                 .from(articleInterest)
                 .where(
                         articleInterest.article.eq(article),
-                        articleInterest.interestId.eq(interestId)
+                        articleInterest.interest.id.eq(interestId)
                 )
                 .exists();
     }

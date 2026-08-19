@@ -4,6 +4,8 @@ import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
 import com.project.monu.domain.article.dto.request.ArticleSortType;
 import com.project.monu.domain.article.entity.*;
 import com.project.monu.domain.article.exception.InvalidArticleCursorException;
+import com.project.monu.domain.interest.entity.Interest;
+import com.project.monu.global.config.JpaAuditingConfig;
 import com.project.monu.global.config.QuerydslConfig;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
@@ -20,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
-@Import(QuerydslConfig.class)
+@Import({QuerydslConfig.class, JpaAuditingConfig.class})
 class ArticleRepositoryImplTest {
 
     @Autowired
@@ -146,17 +148,19 @@ class ArticleRepositoryImplTest {
     void 관심사_ID로_필터링된다() {
         // given
         ArticleSource source = source("NAVER");
-        UUID interestId = UUID.randomUUID();
-        UUID otherInterestId = UUID.randomUUID();
+        Interest interest = Interest.create("관심사");
+        Interest otherInterest = Interest.create("다른관심사");
+        em.persist(interest);
+        em.persist(otherInterest);
 
         Article matchedArticle = article(source, "관심사 매칭 기사", "요약", "2026-08-18T00:00:00Z", 1L, 10L);
         Article otherArticle = article(source, "다른 관심사 기사", "요약", "2026-08-17T00:00:00Z", 1L, 10L);
-        articleInterest(matchedArticle, interestId);
-        articleInterest(otherArticle, otherInterestId);
+        articleInterest(matchedArticle, interest);
+        articleInterest(otherArticle, otherInterest);
         flushAndClear();
 
         ArticleSearchCondition condition = condition(
-                null, interestId, null, null, null,
+                null, interest.getId(), null, null, null,
                 ArticleSortType.PUBLISH_DATE, null, null, 10
         );
 
@@ -392,10 +396,10 @@ class ArticleRepositoryImplTest {
         return article;
     }
 
-    private ArticleInterest articleInterest(Article article, UUID interestId) {
+    private ArticleInterest articleInterest(Article article, Interest interest) {
         ArticleInterest articleInterest = ArticleInterest.builder()
                 .article(article)
-                .interestId(interestId)
+                .interest(interest)
                 .build();
 
         em.persist(articleInterest);
