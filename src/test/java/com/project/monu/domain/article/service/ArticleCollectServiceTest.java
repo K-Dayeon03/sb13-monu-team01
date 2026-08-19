@@ -7,6 +7,8 @@ import com.project.monu.domain.article.entity.SourceType;
 import com.project.monu.domain.article.repository.ArticleInterestRepository;
 import com.project.monu.domain.article.repository.ArticleRepository;
 import com.project.monu.domain.article.repository.ArticleSourceRepository;
+import com.project.monu.domain.interest.entity.Interest;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +34,8 @@ class ArticleCollectServiceTest {
     private ArticleSourceRepository articleSourceRepository;
     @Mock
     private ArticleInterestRepository articleInterestRepository;
+    @Mock
+    private EntityManager entityManager;
 
     @InjectMocks
     private ArticleCollectService articleCollectService;
@@ -93,6 +97,9 @@ class ArticleCollectServiceTest {
                 .build();
         when(articleSourceRepository.findByName("NAVER"))
                 .thenReturn(Optional.of(naverSource));
+        when(entityManager.getReference(eq(Interest.class), any(UUID.class)))
+                .thenReturn(mock(Interest.class));
+
         List<UUID> matchedInterestIds = List.of(UUID.randomUUID(), UUID.randomUUID());
 
         // when

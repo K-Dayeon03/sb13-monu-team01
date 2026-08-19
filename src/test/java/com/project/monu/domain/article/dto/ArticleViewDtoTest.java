@@ -3,6 +3,7 @@ package com.project.monu.domain.article.dto;
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.entity.ArticleSource;
 import com.project.monu.domain.article.entity.ArticleView;
+import com.project.monu.domain.users.entity.User;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -28,9 +29,11 @@ class ArticleViewDtoTest {
         ArticleView articleView = mock(ArticleView.class);
         Article article = mock(Article.class);
         ArticleSource source = mock(ArticleSource.class);
+        User viewer = mock(User.class);
 
         when(articleView.getId()).thenReturn(viewId);
-        when(articleView.getViewerId()).thenReturn(viewerId);
+        when(viewer.getId()).thenReturn(viewerId);
+        when(articleView.getViewer()).thenReturn(viewer);
         when(articleView.getCreatedAt()).thenReturn(createdAt);
         when(articleView.getArticle()).thenReturn(article);
 

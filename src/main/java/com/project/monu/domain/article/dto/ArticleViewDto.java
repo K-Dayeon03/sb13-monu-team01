@@ -34,7 +34,7 @@ public record ArticleViewDto(
 
         return new ArticleViewDto(
                 articleView.getId(),
-                articleView.getViewerId(),
+                articleView.getViewer().getId(),
                 articleView.getCreatedAt(),
                 article.getId(),
                 article.getSource().getName(),

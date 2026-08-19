@@ -20,7 +20,7 @@ public interface ArticleViewRepository extends JpaRepository<ArticleView, UUID> 
     @Query("""
         select av.article.id
         from ArticleView av
-        where av.viewerId = :userId
+        where av.viewer.id = :userId
           and av.article.id in :articleIds
     """)
     Set<UUID> findViewedArticleIds(
