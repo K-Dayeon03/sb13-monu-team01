@@ -5,6 +5,8 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.ObjectMapper;
 
@@ -12,6 +14,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NaverNewsClientTest {
+
+    private static final Logger log = LoggerFactory.getLogger(NaverNewsClientTest.class);
+
 
     @Test
     @Disabled("실제 Naver API 호출 - 필요할 때만 수동 실행")
@@ -29,13 +34,17 @@ class NaverNewsClientTest {
         ObjectMapper objectMapper = new ObjectMapper();
         NaverNewsClient client = new NaverNewsClient(restClient, objectMapper);
         // when
-        NaverNewsResponse response = client.search("치킨");
+        NaverNewsResponse response = client.search("유튜브");
 
         // then
         assertThat(response).isNotNull();
         assertThat(response.items()).isNotEmpty();
 
         response.items().forEach(item -> {
+            log.info("제목: {}", item.title());
+            log.info("링크: {}", item.originalLink());
+            log.info("날짜: {}", item.pubDate());
+            log.info("---");
             System.out.println("제목: " + item.title());
             System.out.println("링크: " + item.originalLink());
             System.out.println("날짜: " + item.pubDate());
