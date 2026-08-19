@@ -1,4 +1,4 @@
-package com.project.monu.domain.article.dto;
+package com.project.monu.global.dto;
 
 import java.time.Instant;
 import java.util.List;
@@ -13,7 +13,21 @@ import java.util.List;
  * @param totalElements 총 요소 수
  * @param hasNext 다음 페이지 존재 여부
  */
+/*
+* 정렬 기준별
+* PUBLISH_DATE 정렬
+* - nextAfter = 마지막 기사 publishDate
+* - nextCursor = 마지막 기사 id
 
+* COMMENT_COUNT 정렬
+* - nextCursor = 마지막 기사 commentCount + "_" + 마지막 기사 id
+* - nextAfter = 마지막 기사 publishDate
+
+
+* VIEW_COUNT 정렬
+* - nextCursor = 마지막 기사 viewCount + "_" + 마지막 기사 id
+* - nextAfter = 마지막 기사 publishDate
+* */
 
 public record CursorPageResponse<T>(
 
@@ -25,6 +39,9 @@ public record CursorPageResponse<T>(
         boolean hasNext
 ) {
 
+    /**
+     * 커서 페이지 응답을 만들 때 생성자 대신 사용할 수 있는 정적 팩토리 메서드입니다.
+     */
     public static <T> CursorPageResponse<T> of(
             List<T> content,
             String nextCursor,

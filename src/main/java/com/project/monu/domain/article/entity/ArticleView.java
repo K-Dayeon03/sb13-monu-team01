@@ -1,6 +1,7 @@
 package com.project.monu.domain.article.entity;
 
 
+import com.project.monu.domain.users.entity.User;
 import jakarta.persistence.*;
 import jakarta.persistence.Entity;
 import lombok.AccessLevel;
@@ -31,12 +32,9 @@ public class ArticleView {
     @Column(columnDefinition = "uuid")
     private UUID id;
 
-    /**
-     * 조회한 사용자
-     * user 엔티티 병합 후 @ManyToOne(User) 로 교체 필요
-     */
-    @Column(name = "viewer_id", columnDefinition = "uuid", nullable = false)
-    private UUID viewerId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "viewer_id", nullable = false)
+    private User viewer;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "article_id", nullable = false)
@@ -49,8 +47,8 @@ public class ArticleView {
 
 
     @Builder
-    public ArticleView(UUID viewerId, Article article) {
-        this.viewerId = viewerId;
+    public ArticleView(User viewer, Article article) {
+        this.viewer = viewer;
         this.article = article;
     }
 }

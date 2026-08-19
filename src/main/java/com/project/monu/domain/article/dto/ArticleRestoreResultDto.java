@@ -6,9 +6,9 @@ import java.util.UUID;
 
 
 /**
- * 기수 복구 DTO
+ * 기사 복구 DTO
  *
- * 백업(S3) 데이터와 현wo DB 데이터를 비교해 유실물을 복구
+ * 백업(S3) 데이터와 현재 DB 데이터를 비교해 유실된 기사를 복구
  *
  * @param restoreDate 복구 대상 날짜
  * @param restoredArticleIds 복구된 기사 ID 목록
