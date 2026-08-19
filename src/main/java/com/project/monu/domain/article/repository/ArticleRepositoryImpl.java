@@ -1,9 +1,12 @@
 package com.project.monu.domain.article.repository;
 
 import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
+import com.project.monu.domain.article.dto.request.ArticleSortType;
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.entity.QArticle;
 import com.project.monu.domain.article.entity.QArticleInterest;
+import com.project.monu.domain.article.exception.InvalidArticleCursorException;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -24,9 +27,48 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
      * 검색 조건과 커서를 기준으로 기사 목록을 조회합니다.
      * size + 1개를 조회해서 다음 페이지 존재 여부를 판단합니다.
      *
-     * 현재 구현은 발행일 최신순 기준입니다.
-     * 댓글 수/조회 수 정렬은 정렬 기준별 커서 조건을 추가하면 확장할 수 있습니다.
+     * 정렬 기준에 따라 발행일, 댓글 수, 조회 수 기준 커서를 적용합니다.
      */
+    private BooleanExpression cursorCondition(ArticleSearchCondition condition) {
+        ArticleSortType sortType = condition.sortType() == null
+                ? ArticleSortType.PUBLISH_DATE
+                : condition.sortType();
+
+        return switch (sortType) {
+            case COMMENT_COUNT -> commentCountCursor(condition.nextCursor());
+            case VIEW_COUNT -> viewCountCursor(condition.nextCursor());
+            case PUBLISH_DATE -> publishDateCursor(condition.nextAfter(), condition.nextCursor());
+        };
+    }
+
+    private BooleanExpression viewCountCursor(String nextCursor) {
+        Cursor cursor = parseCursor(nextCursor);
+
+        if (cursor == null) {
+            return null;
+        }
+
+        QArticle article = QArticle.article;
+
+        return article.viewCount.lt(cursor.value())
+                .or(article.viewCount.eq(cursor.value())
+                        .and(article.id.lt(cursor.id())));
+    }
+
+    private BooleanExpression commentCountCursor(String nextCursor) {
+        Cursor cursor = parseCursor(nextCursor);
+
+        if (cursor == null) {
+            return null;
+        }
+
+        QArticle article = QArticle.article;
+
+        return article.commentCount.lt(cursor.value())
+                .or(article.commentCount.eq(cursor.value())
+                        .and(article.id.lt(cursor.id())));
+    }
+
     @Override
     public List<Article> searchByCursor(ArticleSearchCondition condition) {
         QArticle article = QArticle.article;
@@ -43,12 +85,12 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
                         interestEq(condition.interestId()),
                         publishDateGoe(condition.publishDateFrom()),
                         publishDateLoe(condition.publishDateTo()),
-                        publishDateCursor(condition.nextAfter()),
+                        cursorCondition(condition),
                         notDeleted()
                 )
                 // 기본 정렬: 최신 기사순.
                 // 같은 발행 시각의 기사가 여러 개일 수 있으므로 id를 보조 정렬로 사용합니다.
-                .orderBy(article.publishDate.desc(), article.id.desc())
+                .orderBy(orderBy(condition))
                 .limit(condition.size() + 1)
                 .fetch();
     }
@@ -140,16 +182,88 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
 
     // 다음 페이지 조회 시 마지막으로 본 발행일보다 이전 기사만 조회합니다.
     // 최신순(desc) 정렬이므로 다음 페이지는 nextAfter보다 과거 발행일을 가져와야 합니다.
-    private BooleanExpression publishDateCursor(Instant nextAfter) {
-        if (nextAfter == null) {
+    // 발행일 정렬 커서는 nextAfter(발행일)와 nextCursor(기사 ID)가 한 쌍으로 들어와야 합니다.
+    private BooleanExpression publishDateCursor(Instant nextAfter, String nextCursor) {
+        boolean hasNextAfter = nextAfter != null;
+        boolean hasNextCursor = nextCursor != null && !nextCursor.isBlank();
+
+        if (!hasNextAfter && !hasNextCursor) {
             return null;
         }
 
-        return QArticle.article.publishDate.lt(nextAfter);
+        if (!hasNextAfter || !hasNextCursor) {
+            throw new InvalidArticleCursorException(
+                    "PUBLISH_DATE cursor requires both nextAfter and nextCursor."
+            );
+        }
+
+        try {
+            UUID cursorId = UUID.fromString(nextCursor);
+            QArticle article = QArticle.article;
+
+            return article.publishDate.lt(nextAfter)
+                    .or(article.publishDate.eq(nextAfter)
+                            .and(article.id.lt(cursorId)));
+        } catch (IllegalArgumentException e) {
+            throw new InvalidArticleCursorException("Invalid PUBLISH_DATE cursor.");
+        }
     }
 
     // 논리 삭제되지 않은 기사만 조회합니다.
     private BooleanExpression notDeleted() {
         return QArticle.article.deletedAt.isNull();
+    }
+
+    // 요청된 정렬 기준에 따라 정렬 조건을 선택합니다.
+    // 모든 정렬은 id를 보조 정렬로 사용해 같은 값이 있는 경우에도 순서를 안정적으로 유지합니다.
+    private OrderSpecifier<?>[] orderBy(ArticleSearchCondition condition) {
+        QArticle article = QArticle.article;
+
+        ArticleSortType sortType = condition.sortType() == null
+                ? ArticleSortType.PUBLISH_DATE
+                : condition.sortType();
+
+        return switch (sortType) {
+            case COMMENT_COUNT -> new OrderSpecifier[]{
+                    article.commentCount.desc(),
+                    article.id.desc()
+            };
+            case VIEW_COUNT -> new OrderSpecifier[]{
+                    article.viewCount.desc(),
+                    article.id.desc()
+            };
+            case PUBLISH_DATE -> new OrderSpecifier[]{
+                    article.publishDate.desc(),
+                    article.id.desc()
+            };
+        };
+    }
+
+    private record Cursor(Long value, UUID id) {
+    }
+
+    // 댓글 수/조회 수 커서는 "정렬값_기사ID" 형태입니다.
+    // 잘못된 커서 형식이면 같은 페이지가 반복되지 않도록 400 오류로 응답합니다.
+    private Cursor parseCursor(String nextCursor) {
+        if (nextCursor == null || nextCursor.isBlank()) {
+            return null;
+        }
+
+        String[] parts = nextCursor.split("_");
+
+        if (parts.length != 2) {
+            throw new InvalidArticleCursorException(
+                    "Cursor must be formatted as 'value_articleId'."
+            );
+        }
+
+        try {
+            return new Cursor(
+                    Long.parseLong(parts[0]),
+                    UUID.fromString(parts[1])
+            );
+        } catch (IllegalArgumentException e) {
+            throw new InvalidArticleCursorException("Invalid cursor value.");
+        }
     }
 }

@@ -13,7 +13,21 @@ import java.util.List;
  * @param totalElements 총 요소 수
  * @param hasNext 다음 페이지 존재 여부
  */
+/*
+* 정렬 기준별
+* PUBLISH_DATE 정렬
+* - nextAfter = 마지막 기사 publishDate
+* - nextCursor = 마지막 기사 id
 
+* COMMENT_COUNT 정렬
+* - nextCursor = 마지막 기사 commentCount + "_" + 마지막 기사 id
+* - nextAfter = 마지막 기사 publishDate
+
+
+* VIEW_COUNT 정렬
+* - nextCursor = 마지막 기사 viewCount + "_" + 마지막 기사 id
+* - nextAfter = 마지막 기사 publishDate
+* */
 
 public record CursorPageResponse<T>(
 
