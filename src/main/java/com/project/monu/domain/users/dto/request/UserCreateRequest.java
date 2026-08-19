@@ -1,10 +1,12 @@
 package com.project.monu.domain.users.dto.request;
 
+import com.project.monu.domain.users.validation.PasswordMatches;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+@PasswordMatches
 public record UserCreateRequest(
 
     @NotBlank
