@@ -1,6 +1,7 @@
 package com.project.monu.domain.article.entity;
 
 
+import com.project.monu.domain.interest.entity.Interest;
 import jakarta.persistence.*;
 import jakarta.persistence.Entity;
 import lombok.AccessLevel;
@@ -37,12 +38,10 @@ public class ArticleInterest {
     @JoinColumn(name = "article_id",  nullable = false)
     private Article article;
 
-    /**
-     * 매칭된 관심사.
-     * Interest 엔티티 병합 후 @ManyToOne(Interest) 로 교체 필요
-     */
-    @Column(name = "interest_id", columnDefinition = "uuid", nullable = false)
-    private UUID interestId;
+    // interestId(UUID) → interest(@ManyToOne)로 변경
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "interest_id", nullable = false)
+    private Interest interest;
 
 
     @CreationTimestamp
@@ -50,8 +49,8 @@ public class ArticleInterest {
     private Instant createdAt;
 
     @Builder
-    public ArticleInterest(Article article, UUID interestId) {
+    public ArticleInterest(Article article, Interest interest) {
         this.article = article;
-        this.interestId = interestId;
+        this.interest = interest;
     }
 }

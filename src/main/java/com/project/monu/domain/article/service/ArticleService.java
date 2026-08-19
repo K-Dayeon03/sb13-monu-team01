@@ -2,6 +2,7 @@ package com.project.monu.domain.article.service;
 
 import com.project.monu.domain.article.dto.ArticleDto;
 import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
+import com.project.monu.domain.article.dto.request.ArticleSortType;
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.repository.ArticleRepository;
 import com.project.monu.domain.article.repository.ArticleViewRepository;
@@ -19,6 +20,9 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class ArticleService {
 
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final ArticleRepository articleRepository;
     private final ArticleViewRepository articleViewRepository;
 
@@ -27,12 +31,24 @@ public class ArticleService {
             UUID userId
     ) {
         // size가 0 이하로 들어오면 기본 페이지 크기 10을 사용합니다.
+        // 너무 큰 size는 DB에 부담을 줄 수 있으므로 최대 100개로 제한합니다.
         // 이후 Repository에서는 size + 1개를 조회해서 다음 페이지 존재 여부를 판단합니다.
-        int size = condition.size() <= 0 ? 10 : condition.size();
+        int size = normalizeSize(condition.size());
+        ArticleSearchCondition normalizedCondition = new ArticleSearchCondition(
+                condition.keyword(),
+                condition.interestId(),
+                condition.source(),
+                condition.publishDateFrom(),
+                condition.publishDateTo(),
+                condition.sortType(),
+                condition.nextAfter(),
+                condition.nextCursor(),
+                size
+        );
 
         // 검색어, 출처, 관심사, 날짜 범위, 커서 조건을 적용해 기사 목록을 조회합니다.
         // 실제 동적 쿼리 조립은 ArticleRepositoryImpl에서 QueryDSL로 처리합니다.
-        List<Article> articles = articleRepository.searchByCursor(condition);
+        List<Article> articles = articleRepository.searchByCursor(normalizedCondition);
 
         // 요청한 size보다 1개 더 조회되었다면 다음 페이지가 있다는 뜻입니다.
         boolean hasNext = articles.size() > size;
@@ -51,7 +67,7 @@ public class ArticleService {
         // viewedByMe는 Article 자체의 컬럼이 아니라 "현재 사용자 기준" 계산값입니다.
         // 목록의 각 기사마다 조회 이력을 따로 조회하면 N+1 문제가 생기므로,
         // 현재 페이지의 기사 ID들을 기준으로 조회 이력을 한 번에 가져옵니다.
-        Set<UUID> viewedArticleIds = articleIds.isEmpty()|| userId == null
+        Set<UUID> viewedArticleIds = articleIds.isEmpty() || userId == null
                 ? Set.of()
                 : articleViewRepository.findViewedArticleIds(userId, articleIds);
 
@@ -72,16 +88,40 @@ public class ArticleService {
                 .toList();
 
         // 현재 페이지의 마지막 기사를 기준으로 다음 페이지 커서를 만듭니다.
-        // 현재 구현은 publishDate 기준 커서 페이지네이션이므로 nextAfter에 마지막 발행 시각을 담습니다.
+        // nextCursor는 정렬 기준별 커서 값을 담고, nextAfter는 마지막 기사 발행 시각을 함께 내려줍니다.
         Article lastArticle = articles.isEmpty() ? null : articles.get(articles.size() - 1);
 
         return new CursorPageResponse<>(
                 content,
-                hasNext && lastArticle != null ? lastArticle.getId().toString() : null,
+                hasNext ? createNextCursor(lastArticle, normalizedCondition.sortType()) : null,
                 hasNext && lastArticle != null ? lastArticle.getPublishDate() : null,
                 size,
-                articleRepository.countByCondition(condition),
+                articleRepository.countByCondition(normalizedCondition),
                 hasNext
         );
+    }
+
+    private String createNextCursor(Article article, ArticleSortType sortType) {
+        if (article == null) {
+            return null;
+        }
+
+        ArticleSortType resolvedSortType = sortType == null
+                ? ArticleSortType.PUBLISH_DATE
+                : sortType;
+
+        return switch (resolvedSortType) {
+            case COMMENT_COUNT -> article.getCommentCount() + "_" + article.getId();
+            case VIEW_COUNT -> article.getViewCount() + "_" + article.getId();
+            case PUBLISH_DATE -> article.getId().toString();
+        };
+    }
+
+    private int normalizeSize(int requestedSize) {
+        if (requestedSize <= 0) {
+            return DEFAULT_PAGE_SIZE;
+        }
+
+        return Math.min(requestedSize, MAX_PAGE_SIZE);
     }
 }
