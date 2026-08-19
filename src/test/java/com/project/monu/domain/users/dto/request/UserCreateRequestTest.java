@@ -28,6 +28,7 @@ class UserCreateRequestTest {
     UserCreateRequest request = new UserCreateRequest(
         "test@test.com",
         "",
+        "password123!",
         "password123!"
     );
 
@@ -44,6 +45,7 @@ class UserCreateRequestTest {
     UserCreateRequest request = new UserCreateRequest(
         "test@test.com",
         "12345678901",
+        "password123!",
         "password123!"
     );
 
@@ -59,6 +61,7 @@ class UserCreateRequestTest {
     UserCreateRequest request = new UserCreateRequest(
         "잘못된이메일",
         "테스트",
+        "password123!",
         "password123!"
     );
 
@@ -75,6 +78,7 @@ class UserCreateRequestTest {
     UserCreateRequest request = new UserCreateRequest(
         "test@test.com",
         "테스트",
+        "",
         ""
     );
 
@@ -91,6 +95,7 @@ class UserCreateRequestTest {
     UserCreateRequest request = new UserCreateRequest(
         "test@test.com",
         "테스트",
+        "Ab1!2",
         "Ab1!2"
     );
 
@@ -107,6 +112,7 @@ class UserCreateRequestTest {
     UserCreateRequest request = new UserCreateRequest(
         "test@test.com",
         "테스트",
+        "Ab1!23",
         "Ab1!23"
     );
 
@@ -123,6 +129,7 @@ class UserCreateRequestTest {
     UserCreateRequest request = new UserCreateRequest(
         "test@test.com",
         "테스트",
+        "Abcdef1234567890!@#$%",
         "Abcdef1234567890!@#$%"
     );
 
@@ -139,6 +146,7 @@ class UserCreateRequestTest {
     UserCreateRequest request = new UserCreateRequest(
         "test@test.com",
         "테스트",
+        "Abcdef1234567890!@#$",
         "Abcdef1234567890!@#$"
     );
 
@@ -163,6 +171,7 @@ class UserCreateRequestTest {
     UserCreateRequest request = new UserCreateRequest(
         "test@test.com",
         "테스트",
+        password,
         password
     );
 
@@ -181,6 +190,53 @@ class UserCreateRequestTest {
     UserCreateRequest request = new UserCreateRequest(
         "test@test.com",
         "테스트",
+        "Abc123!",
+        "Abc123!"
+    );
+
+    Set<ConstraintViolation<UserCreateRequest>> violations =
+        validator.validate(request);
+
+    assertThat(violations).isEmpty();
+  }
+
+  // password confirm test
+  @Test
+  void 비밀번호_확인이_없으면_검증에_실패한다() {
+    UserCreateRequest request = new UserCreateRequest(
+        "test@test.com",
+        "테스트",
+        "Abc123!",
+        ""
+    );
+
+    Set<ConstraintViolation<UserCreateRequest>> violations =
+        validator.validate(request);
+
+    assertThat(violations).isNotEmpty();
+  }
+
+  @Test
+  void 비밀번호와_비밀번호_확인이_다르면_검증에_실패한다() {
+    UserCreateRequest request = new UserCreateRequest(
+        "test@test.com",
+        "테스트",
+        "Abc123!",
+        "Abc124!"
+    );
+
+    Set<ConstraintViolation<UserCreateRequest>> violations =
+        validator.validate(request);
+
+    assertThat(violations).isNotEmpty();
+  }
+
+  @Test
+  void 비밀번호와_비밀번호_확인이_같으면_검증에_성공한다() {
+    UserCreateRequest request = new UserCreateRequest(
+        "test@test.com",
+        "테스트",
+        "Abc123!",
         "Abc123!"
     );
 

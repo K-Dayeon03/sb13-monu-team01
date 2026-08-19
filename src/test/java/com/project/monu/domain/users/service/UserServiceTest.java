@@ -24,6 +24,7 @@ class UserServiceTest {
     UserCreateRequest request = new UserCreateRequest(
         "test@test.com",
         "테스트",
+        "password123!",
         "password123!"
     );
 
@@ -48,6 +49,7 @@ class UserServiceTest {
     UserCreateRequest request = new UserCreateRequest(
         "test@test.com",
         "새로운사용자",
+        "password123!",
         "password123!"
     );
 
