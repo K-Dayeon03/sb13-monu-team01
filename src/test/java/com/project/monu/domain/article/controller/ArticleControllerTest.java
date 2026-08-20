@@ -82,7 +82,7 @@ class ArticleControllerTest {
                         .param("nextAfter", "2026-08-17T00:00:00Z")
                         .param("nextCursor", "10_" + articleId)
                         .param("size", "10")
-                        .param("userId", userId.toString()))
+                        .header("MoNew-Request-User-ID", userId.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(articleId.toString()))
                 .andExpect(jsonPath("$.content[0].source").value("NAVER"))
@@ -116,7 +116,7 @@ class ArticleControllerTest {
                         .param("nextAfter", "2026-08-10T00:00:00Z")
                         .param("nextCursor", "100_" + UUID.randomUUID())
                         .param("size", "20")
-                        .param("userId", userId.toString()))
+                        .header("MoNew-Request-User-ID", userId.toString()))
                 .andExpect(status().isOk());
 
         // then
@@ -141,18 +141,20 @@ class ArticleControllerTest {
     void 선택_파라미터가_없으면_기본_정렬과_기본_size를_사용한다() throws Exception {
         // given
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(articleController).build();
+        UUID userId = UUID.randomUUID();
 
-        when(articleService.getArticles(any(ArticleSearchCondition.class), eq(null)))
+        when(articleService.getArticles(any(ArticleSearchCondition.class), eq(userId)))
                 .thenReturn(CursorPageResponse.of(List.of(), null, null, 10, 0L, false));
 
         // when
-        mockMvc.perform(get("/api/articles"))
+        mockMvc.perform(get("/api/articles")
+                        .header("MoNew-Request-User-ID", userId.toString()))
                 .andExpect(status().isOk());
 
         // then
         // sortType과 size는 Controller의 @RequestParam defaultValue로 기본값이 적용됩니다.
         ArgumentCaptor<ArticleSearchCondition> conditionCaptor = ArgumentCaptor.forClass(ArticleSearchCondition.class);
-        verify(articleService).getArticles(conditionCaptor.capture(), eq(null));
+        verify(articleService).getArticles(conditionCaptor.capture(), eq(userId));
 
         ArticleSearchCondition condition = conditionCaptor.getValue();
 
@@ -165,5 +167,12 @@ class ArticleControllerTest {
         assertThat(condition.nextAfter()).isNull();
         assertThat(condition.nextCursor()).isNull();
         assertThat(condition.size()).isEqualTo(10);
+    }
+    @Test
+    void 사용자_ID_헤더가_없으면_400을_응답한다() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(articleController).build();
+
+        mockMvc.perform(get("/api/articles"))
+                .andExpect(status().isBadRequest());
     }
 }
