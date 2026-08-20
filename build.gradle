@@ -40,8 +40,8 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
-    // Password Encryption
-    implementation 'org.springframework.security:spring-security-crypto'
+    // rome RSS 파싱 라이브러리
+    implementation 'com.rometools:rome:2.1.0'
 
     // Actuator
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
@@ -57,6 +57,9 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-data-jpa-test'
     testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Password Encryption
+    implementation 'org.springframework.security:spring-security-crypto'
 }
 
 tasks.named('test') {
