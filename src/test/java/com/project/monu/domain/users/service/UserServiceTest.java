@@ -7,6 +7,7 @@ import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.exception.BusinessException;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -89,6 +90,25 @@ class UserServiceTest {
     ));
   }
 
+  @Test
+  void 회원가입_중_이메일_중복으로_데이터베이스_예외가_발생하면_이메일_중복_예외로_변환한다() {
+    UserCreateRequest request = new UserCreateRequest(
+        "test@test.com",
+        "테스트",
+        "password123!"
+    );
+
+    when(userRepository.existsByEmail(request.email()))
+        .thenReturn(false);
+
+    when(userRepository.save(any(User.class)))
+        .thenThrow(new DataIntegrityViolationException("duplicate email"));
+
+    assertThatThrownBy(() -> userService.create(request))
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("이미 존재하는 이메일입니다.");
+  }
+
   // login
   @Test
   void DB에_존재하는_사용자의_올바른_이메일과_비밀번호로_로그인할_수_있다() {
@@ -116,4 +136,5 @@ class UserServiceTest {
     assertThat(response.email()).isEqualTo("test@test.com");
     assertThat(response.nickname()).isEqualTo("테스트");
   }
+
 }
