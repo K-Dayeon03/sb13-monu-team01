@@ -104,5 +104,37 @@ class KeywordMatcherTest {
         assertThat(result).containsExactly(semiconductorId);
     }
 
+    @Test
+    @DisplayName("요약이 null이어도 예외 없이 제목으로 매칭힌다.")
+    void 요약이_null이어도_제목으로_매칭() {
+        KeywordMatcher matcher = new KeywordMatcher();
+        CollectedArticle article = new CollectedArticle(
+                "삼성전자 반도체 신제품",
+                "https://example.com/1",
+                null,                        // summary null
+                Instant.now()
+        );
+
+        boolean result = matcher.containsKeyword(article, "반도체");
+
+        assertThat(result).isTrue();
+    }
+    
+    @Test
+    @DisplayName("어떤 관심사도 포함하지 않으면 빈 리스트로 반환한다")
+    void 매치되는_관심사가_없으면_빈_리스트() {
+        KeywordMatcher matcher = new KeywordMatcher();
+        CollectedArticle article = new CollectedArticle(
+                "날씨 맑음", "https://example.com/1", "산책하기 좋은 날", Instant.now()
+        );
+        List<InterestKeywords> interests = List.of(
+                new InterestKeywords(UUID.randomUUID(), List.of("반도체", "AI"))
+        );
+
+        List<UUID> result = matcher.findMatchedInterests(article, interests);
+
+        assertThat(result).isEmpty();
+    }
+
 
 }
