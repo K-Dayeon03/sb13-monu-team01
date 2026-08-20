@@ -1,0 +1,78 @@
+package com.project.monu.domain.notification.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.when;
+
+import com.project.monu.domain.notification.dto.NotificationResponse;
+import com.project.monu.domain.notification.entity.Notification;
+import com.project.monu.domain.notification.entity.NotificationResourceType;
+import com.project.monu.domain.notification.repository.NotificationRepository;
+import com.project.monu.global.exception.BusinessException;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+
+class NotificationServiceTest {
+
+    private final NotificationRepository notificationRepository =
+            org.mockito.Mockito.mock(NotificationRepository.class);
+
+    private final NotificationService notificationService =
+            new NotificationService(notificationRepository);
+
+    @Test
+    void 본인_알림을_단건_확인할_수_있다() {
+        UUID userId = UUID.randomUUID();
+        UUID notificationId = UUID.randomUUID();
+        Notification notification = createNotification(userId);
+
+        when(notificationRepository.findById(notificationId))
+                .thenReturn(Optional.of(notification));
+
+        NotificationResponse response =
+                notificationService.confirmNotification(notificationId, userId);
+
+        assertThat(response.confirmed()).isTrue();
+        assertThat(notification.isConfirmed()).isTrue();
+        assertThat(notification.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    void 존재하지_않는_알림을_확인하면_예외가_발생한다() {
+        UUID userId = UUID.randomUUID();
+        UUID notificationId = UUID.randomUUID();
+
+        when(notificationRepository.findById(notificationId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                notificationService.confirmNotification(notificationId, userId)
+        ).isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void 다른_사용자의_알림은_확인할_수_없다() {
+        UUID requestUserId = UUID.randomUUID();
+        UUID notificationOwnerId = UUID.randomUUID();
+        UUID notificationId = UUID.randomUUID();
+        Notification notification = createNotification(notificationOwnerId);
+
+        when(notificationRepository.findById(notificationId))
+                .thenReturn(Optional.of(notification));
+
+        assertThatThrownBy(() ->
+                notificationService.confirmNotification(notificationId, requestUserId)
+        ).isInstanceOf(BusinessException.class);
+    }
+
+    private Notification createNotification(UUID userId) {
+        return Notification.create(
+                userId,
+                "새로운 알림입니다.",
+                NotificationResourceType.COMMENT,
+                UUID.randomUUID()
+        );
+    }
+}
