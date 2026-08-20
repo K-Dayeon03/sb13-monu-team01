@@ -6,6 +6,7 @@ import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.exception.BusinessException;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -18,7 +19,8 @@ import static org.mockito.Mockito.when;
 class UserServiceTest {
 
   private final UserRepository userRepository = mock(UserRepository.class);
-  private final UserService userService = new UserService(userRepository);
+  private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
+  private final UserService userService = new UserService(userRepository, passwordEncoder);
 
   @Test
   void 정상적인_정보로_회원가입할_수_있다() {
@@ -28,10 +30,13 @@ class UserServiceTest {
         "password123!"
     );
 
+    when(passwordEncoder.encode(request.password()))
+        .thenReturn("encoded-password");
+
     User savedUser = User.builder()
         .email("test@test.com")
         .nickname("테스트")
-        .password("password123!")
+        .password("encoded-password")
         .build();
 
     when(userRepository.save(any(User.class))).thenReturn(savedUser);
@@ -68,13 +73,16 @@ class UserServiceTest {
         "password123!"
     );
 
+    when(passwordEncoder.encode(request.password()))
+        .thenReturn("encoded-password");
+
     when(userRepository.save(any(User.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     userService.create(request);
 
     verify(userRepository).save(argThat(user ->
-        !user.getPassword().equals(request.password())
+        "encoded-password".equals(user.getPassword())
     ));
   }
 }
