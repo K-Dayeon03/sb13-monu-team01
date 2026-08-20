@@ -1,5 +1,5 @@
 package com.project.monu.domain.comment.controller;
 
-public class Controller {
+public class CommentController {
 
 }
