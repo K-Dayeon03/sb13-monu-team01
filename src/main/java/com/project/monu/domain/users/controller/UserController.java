@@ -1,6 +1,7 @@
 package com.project.monu.domain.users.controller;
 
 import com.project.monu.domain.users.dto.request.UserCreateRequest;
+import com.project.monu.domain.users.dto.request.UserLoginRequest;
 import com.project.monu.domain.users.dto.response.UserResponse;
 import com.project.monu.domain.users.service.UserService;
 import jakarta.validation.Valid;
@@ -23,5 +24,12 @@ public class UserController {
       @Valid @RequestBody UserCreateRequest request
   ) {
     return userService.create(request);
+  }
+
+  @PostMapping("/login")
+  public UserResponse login(
+      @RequestBody UserLoginRequest request
+  ) {
+    return userService.login(request);
   }
 }
