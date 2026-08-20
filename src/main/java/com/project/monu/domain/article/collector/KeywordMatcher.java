@@ -11,7 +11,9 @@ import java.util.UUID;
 public class KeywordMatcher {
 
     public boolean containsKeyword(CollectedArticle article, String keyword) {
-        return article.title().contains(keyword) || article.summary().contains(keyword);
+        String title = article.title() != null ? article.title() : "";
+        String summary = article.summary() != null ? article.summary() : "";
+        return title.contains(keyword) || summary.contains(keyword);
     }
 
     public boolean matchesInterest(CollectedArticle article, InterestKeywords interest) {
