@@ -1,5 +1,6 @@
 package com.project.monu.domain.users.dto.response;
 
+import com.project.monu.domain.users.entity.User;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -14,10 +15,18 @@ import java.util.UUID;
  * - PATCH /api/users/{userId} : 사용자 정보 수정 성공
  */
 public record UserResponse(
-
     UUID id,
     String email,
     String nickname,
     Instant createdAt
 ) {
+
+  public static UserResponse from(User user) {
+    return new UserResponse(
+        user.getId(),
+        user.getEmail(),
+        user.getNickname(),
+        user.getCreatedAt()
+    );
+  }
 }
