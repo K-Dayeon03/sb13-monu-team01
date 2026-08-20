@@ -9,14 +9,9 @@ import com.project.monu.domain.interest.entity.Keyword;
 import com.project.monu.domain.interest.exception.InterestDuplicateException;
 import com.project.monu.domain.interest.repository.InterestRepository;
 import com.project.monu.domain.interest.util.InterestSimilarityCalculator;
+import com.project.monu.global.dto.CursorPageResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.project.monu.domain.interest.exception.InterestDuplicateException;
-import com.project.monu.domain.interest.util.InterestSimilarityCalculator;
-import com.project.monu.domain.interest.dto.request.InterestSearchCondition;
-import com.project.monu.domain.interest.dto.request.InterestSortType;
-import com.project.monu.global.dto.CursorPageResponse;
-
 
 import java.util.List;
 
