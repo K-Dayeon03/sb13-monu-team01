@@ -1,11 +1,13 @@
 package com.project.monu.domain.users.service;
 
 import com.project.monu.domain.users.dto.request.UserCreateRequest;
+import com.project.monu.domain.users.dto.request.UserLoginRequest;
 import com.project.monu.domain.users.dto.response.UserResponse;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.exception.BusinessException;
 import com.project.monu.global.exception.ErrorCode;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -37,8 +39,24 @@ public class UserService {
         .password(encodedPassword)
         .build();
 
-    User savedUser = userRepository.save(user);
+    try {
+      User savedUser = userRepository.save(user);
 
-    return UserResponse.from(savedUser);
+      return UserResponse.from(savedUser);
+    } catch (DataIntegrityViolationException exception) {
+      throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
+    }
+  }
+
+  public UserResponse login(UserLoginRequest request) {
+
+    User user = userRepository.findByEmail(request.email())
+        .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
+
+    if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+      throw new BusinessException(ErrorCode.LOGIN_FAILED);
+    }
+
+    return UserResponse.from(user);
   }
 }

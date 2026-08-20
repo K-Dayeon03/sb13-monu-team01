@@ -1,11 +1,13 @@
 package com.project.monu.domain.users.service;
 
 import com.project.monu.domain.users.dto.request.UserCreateRequest;
+import com.project.monu.domain.users.dto.request.UserLoginRequest;
 import com.project.monu.domain.users.dto.response.UserResponse;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.exception.BusinessException;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -15,6 +17,8 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.util.Optional;
 
 class UserServiceTest {
 
@@ -84,5 +88,93 @@ class UserServiceTest {
     verify(userRepository).save(argThat(user ->
         "encoded-password".equals(user.getPassword())
     ));
+  }
+
+  @Test
+  void 회원가입_중_이메일_중복으로_데이터베이스_예외가_발생하면_이메일_중복_예외로_변환한다() {
+    UserCreateRequest request = new UserCreateRequest(
+        "test@test.com",
+        "테스트",
+        "password123!"
+    );
+
+    when(userRepository.existsByEmail(request.email()))
+        .thenReturn(false);
+
+    when(userRepository.save(any(User.class)))
+        .thenThrow(new DataIntegrityViolationException("duplicate email"));
+
+    assertThatThrownBy(() -> userService.create(request))
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("이미 존재하는 이메일입니다.");
+  }
+
+  // login
+  @Test
+  void DB에_존재하는_사용자의_올바른_이메일과_비밀번호로_로그인할_수_있다() {
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("테스트")
+        .password("encoded-password")
+        .build();
+
+    UserLoginRequest request = new UserLoginRequest(
+        "test@test.com",
+        "password123!"
+    );
+
+    when(userRepository.findByEmail(request.email()))
+        .thenReturn(Optional.of(user));
+
+    when(passwordEncoder.matches(
+        request.password(),
+        user.getPassword()
+    )).thenReturn(true);
+
+    UserResponse response = userService.login(request);
+
+    assertThat(response.email()).isEqualTo("test@test.com");
+    assertThat(response.nickname()).isEqualTo("테스트");
+  }
+
+  @Test
+  void 존재하지_않는_이메일로_로그인하면_로그인에_실패한다() {
+    UserLoginRequest request = new UserLoginRequest(
+        "notfound@test.com",
+        "password123!"
+    );
+
+    when(userRepository.findByEmail(request.email()))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> userService.login(request))
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
+  }
+
+  @Test
+  void 비밀번호가_틀리면_로그인에_실패한다() {
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("테스트")
+        .password("encoded-password")
+        .build();
+
+    UserLoginRequest request = new UserLoginRequest(
+        "test@test.com",
+        "wrong-password"
+    );
+
+    when(userRepository.findByEmail(request.email()))
+        .thenReturn(Optional.of(user));
+
+    when(passwordEncoder.matches(
+        request.password(),
+        user.getPassword()
+    )).thenReturn(false);
+
+    assertThatThrownBy(() -> userService.login(request))
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
   }
 }
