@@ -1,6 +1,7 @@
 package com.project.monu.domain.users.service;
 
 import com.project.monu.domain.users.dto.request.UserCreateRequest;
+import com.project.monu.domain.users.dto.request.UserLoginRequest;
 import com.project.monu.domain.users.dto.response.UserResponse;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
@@ -15,6 +16,8 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.util.Optional;
 
 class UserServiceTest {
 
@@ -84,5 +87,33 @@ class UserServiceTest {
     verify(userRepository).save(argThat(user ->
         "encoded-password".equals(user.getPassword())
     ));
+  }
+
+  // login
+  @Test
+  void DB에_존재하는_사용자의_올바른_이메일과_비밀번호로_로그인할_수_있다() {
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("테스트")
+        .password("encoded-password")
+        .build();
+
+    UserLoginRequest request = new UserLoginRequest(
+        "test@test.com",
+        "password123!"
+    );
+
+    when(userRepository.findByEmail(request.email()))
+        .thenReturn(Optional.of(user));
+
+    when(passwordEncoder.matches(
+        request.password(),
+        user.getPassword()
+    )).thenReturn(true);
+
+    UserResponse response = userService.login(request);
+
+    assertThat(response.email()).isEqualTo("test@test.com");
+    assertThat(response.nickname()).isEqualTo("테스트");
   }
 }
