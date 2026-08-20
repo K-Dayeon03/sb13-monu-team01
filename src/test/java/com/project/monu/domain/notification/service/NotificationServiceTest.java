@@ -4,12 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.project.monu.domain.notification.dto.NotificationConfirmAllResponse;
 import com.project.monu.domain.notification.dto.NotificationResponse;
 import com.project.monu.domain.notification.entity.Notification;
 import com.project.monu.domain.notification.entity.NotificationResourceType;
 import com.project.monu.domain.notification.repository.NotificationRepository;
 import com.project.monu.global.exception.BusinessException;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -74,5 +76,24 @@ class NotificationServiceTest {
                 NotificationResourceType.COMMENT,
                 UUID.randomUUID()
         );
+    }
+
+    @Test
+    void 사용자의_미확인_알림을_전체_확인할_수_있다() {
+        UUID userId = UUID.randomUUID();
+        Notification firstNotification = createNotification(userId);
+        Notification secondNotification = createNotification(userId);
+
+        when(notificationRepository.findByUserIdAndConfirmedFalse(userId))
+                .thenReturn(List.of(firstNotification, secondNotification));
+
+        NotificationConfirmAllResponse response =
+                notificationService.confirmAllNotifications(userId);
+
+        assertThat(response.confirmedCount()).isEqualTo(2);
+        assertThat(firstNotification.isConfirmed()).isTrue();
+        assertThat(secondNotification.isConfirmed()).isTrue();
+        assertThat(firstNotification.getUpdatedAt()).isNotNull();
+        assertThat(secondNotification.getUpdatedAt()).isNotNull();
     }
 }

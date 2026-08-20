@@ -1,0 +1,59 @@
+package com.project.monu.domain.notification.service;
+
+import com.project.monu.domain.notification.dto.NotificationConfirmAllResponse;
+import com.project.monu.domain.notification.dto.NotificationResponse;
+import com.project.monu.domain.notification.entity.Notification;
+import com.project.monu.domain.notification.repository.NotificationRepository;
+import com.project.monu.global.exception.BusinessException;
+import com.project.monu.global.exception.ErrorCode;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class NotificationService {
+
+    private final NotificationRepository notificationRepository;
+
+    public NotificationService(NotificationRepository notificationRepository) {
+        this.notificationRepository = notificationRepository;
+    }
+
+    @Transactional
+    public NotificationResponse confirmNotification(
+            UUID notificationId,
+            UUID requestUserId
+    ) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOTIFICATION_NOT_FOUND));
+
+        validateNotificationOwner(notification, requestUserId);
+
+        notification.confirm(Instant.now());
+
+        return NotificationResponse.from(notification);
+    }
+
+    private void validateNotificationOwner(
+            Notification notification,
+            UUID requestUserId
+    ) {
+        if (!notification.getUserId().equals(requestUserId)) {
+            throw new BusinessException(ErrorCode.NOTIFICATION_ACCESS_DENIED);
+        }
+    }
+
+    @Transactional
+    public NotificationConfirmAllResponse confirmAllNotifications(UUID requestUserId) {
+        List<Notification> notifications =
+                notificationRepository.findByUserIdAndConfirmedFalse(requestUserId);
+
+        Instant confirmedAt = Instant.now();
+
+        notifications.forEach(notification -> notification.confirm(confirmedAt));
+
+        return new NotificationConfirmAllResponse(notifications.size());
+    }
+}
