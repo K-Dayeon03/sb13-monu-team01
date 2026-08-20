@@ -4,6 +4,7 @@ import com.project.monu.domain.notification.dto.NotificationConfirmAllResponse;
 import com.project.monu.domain.notification.dto.NotificationResponse;
 import com.project.monu.domain.notification.entity.Notification;
 import com.project.monu.domain.notification.repository.NotificationRepository;
+import com.project.monu.global.dto.CursorPageResponse;
 import com.project.monu.global.exception.BusinessException;
 import com.project.monu.global.exception.ErrorCode;
 import java.time.Instant;
@@ -16,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final int MAX_PAGE_SIZE = 100;
 
     public NotificationService(NotificationRepository notificationRepository) {
         this.notificationRepository = notificationRepository;
@@ -34,6 +37,48 @@ public class NotificationService {
         notification.confirm(Instant.now());
 
         return NotificationResponse.from(notification);
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPageResponse<NotificationResponse> getNotifications(
+            UUID requestUserId,
+            int size
+    ) {
+        int pageSize = normalizePageSize(size);
+
+        List<Notification> notifications =
+                notificationRepository.findByUserIdAndConfirmedFalseOrderByCreatedAtDesc(requestUserId);
+
+        boolean hasNext = notifications.size() > pageSize;
+
+        List<Notification> pageNotifications = hasNext
+                ? notifications.subList(0, pageSize)
+                : notifications;
+
+        List<NotificationResponse> content = pageNotifications.stream()
+                .map(NotificationResponse::from)
+                .toList();
+
+        Notification lastNotification = pageNotifications.isEmpty()
+                ? null
+                : pageNotifications.get(pageNotifications.size() - 1);
+
+        return CursorPageResponse.of(
+                content,
+                hasNext && lastNotification != null ? lastNotification.getId().toString() : null,
+                hasNext && lastNotification != null ? lastNotification.getCreatedAt() : null,
+                pageSize,
+                notifications.size(),
+                hasNext
+        );
+    }
+
+    private int normalizePageSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_PAGE_SIZE;
+        }
+
+        return Math.min(size, MAX_PAGE_SIZE);
     }
 
     private void validateNotificationOwner(
