@@ -59,6 +59,8 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+    // Password Encryption
+    implementation 'org.springframework.security:spring-security-crypto'
 }
 
 tasks.named('test') {
