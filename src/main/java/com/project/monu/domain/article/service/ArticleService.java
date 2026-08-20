@@ -6,11 +6,13 @@ import com.project.monu.domain.article.dto.request.ArticleSortType;
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.repository.ArticleRepository;
 import com.project.monu.domain.article.repository.ArticleViewRepository;
+import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.dto.CursorPageResponse;
+import com.project.monu.global.exception.BusinessException;
+import com.project.monu.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -25,13 +27,16 @@ public class ArticleService {
 
     private final ArticleRepository articleRepository;
     private final ArticleViewRepository articleViewRepository;
+    private final UserRepository userRepository;
 
     public CursorPageResponse<ArticleDto> getArticles(
             ArticleSearchCondition condition,
             UUID userId
     ) {
-        // size가 0 이하로 들어오면 기본 페이지 크기 10을 사용합니다.
-        // 너무 큰 size는 DB에 부담을 줄 수 있으므로 최대 100개로 제한합니다.
+        if (userId == null || !userRepository.existsByIdAndDeletedAtIsNull(userId)) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+        // size가 0 이하이면 기본 페이지 크기 10으로, 너무 크면 최대 100으로 보정합니다.
         // 이후 Repository에서는 size + 1개를 조회해서 다음 페이지 존재 여부를 판단합니다.
         int size = normalizeSize(condition.size());
         ArticleSearchCondition normalizedCondition = new ArticleSearchCondition(
@@ -67,7 +72,7 @@ public class ArticleService {
         // viewedByMe는 Article 자체의 컬럼이 아니라 "현재 사용자 기준" 계산값입니다.
         // 목록의 각 기사마다 조회 이력을 따로 조회하면 N+1 문제가 생기므로,
         // 현재 페이지의 기사 ID들을 기준으로 조회 이력을 한 번에 가져옵니다.
-        Set<UUID> viewedArticleIds = articleIds.isEmpty() || userId == null
+        Set<UUID> viewedArticleIds = articleIds.isEmpty()
                 ? Set.of()
                 : articleViewRepository.findViewedArticleIds(userId, articleIds);
 
