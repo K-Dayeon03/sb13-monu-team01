@@ -3,6 +3,7 @@ package com.project.monu.domain.interest.service;
 import com.project.monu.domain.interest.dto.request.InterestRegisterRequest;
 import com.project.monu.domain.interest.dto.response.InterestDto;
 import com.project.monu.domain.interest.repository.InterestRepository;
+import com.project.monu.global.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.project.monu.domain.interest.exception.InterestDuplicateException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @ExtendWith(MockitoExtension.class)
@@ -58,6 +58,7 @@ class InterestServiceTest {
 
         // when & then
         assertThatThrownBy(() -> interestService.register(request))
-                .isInstanceOf(InterestDuplicateException.class);
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("이미 유사한 관심사가 존재합니다.");
     }
 }

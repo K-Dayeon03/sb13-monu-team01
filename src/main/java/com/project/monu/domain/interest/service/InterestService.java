@@ -4,13 +4,13 @@ import com.project.monu.domain.interest.dto.request.InterestRegisterRequest;
 import com.project.monu.domain.interest.dto.response.InterestDto;
 import com.project.monu.domain.interest.entity.Interest;
 import com.project.monu.domain.interest.entity.Keyword;
-import com.project.monu.domain.interest.exception.InterestDuplicateException;
 import com.project.monu.domain.interest.repository.InterestRepository;
 import com.project.monu.domain.interest.util.InterestSimilarityCalculator;
+import com.project.monu.global.exception.BusinessException;
+import com.project.monu.global.exception.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.project.monu.domain.interest.exception.InterestDuplicateException;
-import com.project.monu.domain.interest.util.InterestSimilarityCalculator;
+
 
 import java.util.List;
 
@@ -29,7 +29,7 @@ public class InterestService {
                 .anyMatch(existingName -> InterestSimilarityCalculator.isSimilar(existingName, request.name()));
 
         if (isDuplicate) {
-            throw new InterestDuplicateException(request.name());
+            throw new BusinessException(ErrorCode.INTEREST_ALREADY_EXISTS);
         }
 
         Interest interest = Interest.create(request.name());
