@@ -1,6 +1,7 @@
 package com.project.monu.domain.users.service;
 
 import com.project.monu.domain.users.dto.request.UserCreateRequest;
+import com.project.monu.domain.users.dto.request.UserLoginRequest;
 import com.project.monu.domain.users.dto.response.UserResponse;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
@@ -40,5 +41,17 @@ public class UserService {
     User savedUser = userRepository.save(user);
 
     return UserResponse.from(savedUser);
+  }
+
+  public UserResponse login(UserLoginRequest request) {
+
+    User user = userRepository.findByEmail(request.email())
+        .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
+
+    if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+      throw new BusinessException(ErrorCode.LOGIN_FAILED);
+    }
+
+    return UserResponse.from(user);
   }
 }
