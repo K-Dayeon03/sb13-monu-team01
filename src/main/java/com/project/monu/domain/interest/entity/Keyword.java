@@ -1,21 +1,16 @@
 package com.project.monu.domain.interest.entity;
 
+import com.project.monu.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 @Entity
 @Table(name = "keyword")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Keyword {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+public class Keyword extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "interest_id", nullable = false)

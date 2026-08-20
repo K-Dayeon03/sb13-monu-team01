@@ -1,25 +1,18 @@
 package com.project.monu.domain.interest.entity;
 
+import com.project.monu.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Table(name = "subscription")
-@EntityListeners(AuditingEntityListener.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Subscription {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+public class Subscription extends BaseEntity {
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;
@@ -27,10 +20,6 @@ public class Subscription {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "interest_id", nullable = false)
     private Interest interest;
-
-    @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private Instant createdAt;
 
     private Subscription(UUID userId, Interest interest) {
         this.userId = userId;
