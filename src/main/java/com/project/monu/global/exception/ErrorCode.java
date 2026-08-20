@@ -22,6 +22,24 @@ public enum ErrorCode {
           HttpStatus.CONFLICT,
           "INTEREST_DUPLICATION",
           "이미 유사한 관심사가 존재합니다."
+  ),
+
+  INTEREST_NOT_FOUND(
+          HttpStatus.NOT_FOUND,
+      "INTEREST_NOT_FOUND",
+              "관심사를 찾을 수 없습니다."
+  ),
+
+  SUBSCRIPTION_ALREADY_EXISTS(
+          HttpStatus.CONFLICT,
+      "SUBSCRIPTION_DUPLICATION",
+              "이미 구독 중인 관심사입니다."
+  ),
+
+  SUBSCRIPTION_NOT_FOUND(
+          HttpStatus.NOT_FOUND,
+      "SUBSCRIPTION_NOT_FOUND",
+              "구독 내역을 찾을 수 없습니다."
   );
 
   private final HttpStatus status;
