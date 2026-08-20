@@ -137,4 +137,44 @@ class UserServiceTest {
     assertThat(response.nickname()).isEqualTo("테스트");
   }
 
+  @Test
+  void 존재하지_않는_이메일로_로그인하면_로그인에_실패한다() {
+    UserLoginRequest request = new UserLoginRequest(
+        "notfound@test.com",
+        "password123!"
+    );
+
+    when(userRepository.findByEmail(request.email()))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> userService.login(request))
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
+  }
+
+  @Test
+  void 비밀번호가_틀리면_로그인에_실패한다() {
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("테스트")
+        .password("encoded-password")
+        .build();
+
+    UserLoginRequest request = new UserLoginRequest(
+        "test@test.com",
+        "wrong-password"
+    );
+
+    when(userRepository.findByEmail(request.email()))
+        .thenReturn(Optional.of(user));
+
+    when(passwordEncoder.matches(
+        request.password(),
+        user.getPassword()
+    )).thenReturn(false);
+
+    assertThatThrownBy(() -> userService.login(request))
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
+  }
 }
