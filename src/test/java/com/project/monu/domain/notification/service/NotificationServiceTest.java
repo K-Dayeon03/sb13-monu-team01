@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
-import com.project.monu.domain.notification.dto.CursorPageResponse;
+import com.project.monu.global.dto.CursorPageResponse;
 import com.project.monu.domain.notification.dto.NotificationConfirmAllResponse;
 import com.project.monu.domain.notification.dto.NotificationResponse;
 import com.project.monu.domain.notification.entity.Notification;
@@ -112,6 +112,57 @@ class NotificationServiceTest {
 
         assertThat(response.content()).hasSize(2);
         assertThat(response.size()).isEqualTo(10);
+        assertThat(response.hasNext()).isFalse();
+    }
+
+//    @Test
+//    void 미확인_알림이_limit보다_많으면_hasNext가_true다() {
+//        UUID userId = UUID.randomUUID();
+//        Notification firstNotification = createNotification(userId);
+//        Notification secondNotification = createNotification(userId);
+//        Notification extraNotification = createNotification(userId);
+//
+//        when(notificationRepository.findByUserIdAndConfirmedFalseOrderByCreatedAtDesc(userId))
+//                .thenReturn(List.of(firstNotification, secondNotification, extraNotification));
+//
+//        CursorPageResponse<NotificationResponse> response =
+//                notificationService.getNotifications(userId, 2);
+//
+//        assertThat(response.content()).hasSize(2);
+//        assertThat(response.size()).isEqualTo(2);
+//        assertThat(response.totalElements()).isEqualTo(3);
+//        assertThat(response.hasNext()).isTrue();
+//    }
+
+    @Test
+    void limit이_0보다_작거나_같으면_기본값_10으로_조회한다() {
+        UUID userId = UUID.randomUUID();
+
+        when(notificationRepository.findByUserIdAndConfirmedFalseOrderByCreatedAtDesc(userId))
+                .thenReturn(List.of());
+
+        CursorPageResponse<NotificationResponse> response =
+                notificationService.getNotifications(userId, 0);
+
+        assertThat(response.content()).isEmpty();
+        assertThat(response.size()).isEqualTo(10);
+        assertThat(response.totalElements()).isZero();
+        assertThat(response.hasNext()).isFalse();
+    }
+
+    @Test
+    void limit이_100보다_크면_최대값_100으로_조회한다() {
+        UUID userId = UUID.randomUUID();
+
+        when(notificationRepository.findByUserIdAndConfirmedFalseOrderByCreatedAtDesc(userId))
+                .thenReturn(List.of());
+
+        CursorPageResponse<NotificationResponse> response =
+                notificationService.getNotifications(userId, 1000);
+
+        assertThat(response.content()).isEmpty();
+        assertThat(response.size()).isEqualTo(100);
+        assertThat(response.totalElements()).isZero();
         assertThat(response.hasNext()).isFalse();
     }
 }
