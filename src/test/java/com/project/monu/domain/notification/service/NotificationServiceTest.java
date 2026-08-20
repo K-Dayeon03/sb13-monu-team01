@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.project.monu.domain.notification.dto.CursorPageResponse;
 import com.project.monu.domain.notification.dto.NotificationConfirmAllResponse;
 import com.project.monu.domain.notification.dto.NotificationResponse;
 import com.project.monu.domain.notification.entity.Notification;
@@ -95,5 +96,22 @@ class NotificationServiceTest {
         assertThat(secondNotification.isConfirmed()).isTrue();
         assertThat(firstNotification.getUpdatedAt()).isNotNull();
         assertThat(secondNotification.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    void 미확인_알림_목록을_조회할_수_있다() {
+        UUID userId = UUID.randomUUID();
+        Notification firstNotification = createNotification(userId);
+        Notification secondNotification = createNotification(userId);
+
+        when(notificationRepository.findByUserIdAndConfirmedFalseOrderByCreatedAtDesc(userId))
+                .thenReturn(List.of(firstNotification, secondNotification));
+
+        CursorPageResponse<NotificationResponse> response =
+                notificationService.getNotifications(userId, 10);
+
+        assertThat(response.content()).hasSize(2);
+        assertThat(response.size()).isEqualTo(10);
+        assertThat(response.hasNext()).isFalse();
     }
 }
