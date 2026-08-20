@@ -7,6 +7,7 @@ import com.project.monu.domain.article.service.ArticleService;
 import com.project.monu.global.dto.CursorPageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -47,9 +48,9 @@ public class ArticleController {
             @RequestParam(required = false) String nextCursor,
             @RequestParam(defaultValue = "10") int size,
 
-            // 인증 기능이 붙기 전까지 viewedByMe 계산 확인용으로 임시 사용합니다.
             // 나중에는 SecurityContext에서 현재 로그인 사용자 ID를 꺼내도록 교체하면 됩니다.
-            @RequestParam(required = false) UUID userId
+            // 인증 연동 전까지 클라이언트가 전달한 요청 사용자 ID로 viewedByMe를 계산합니다.
+            @RequestHeader("MoNew-Request-User-ID") UUID userId
     ) {
         ArticleSearchCondition condition = new ArticleSearchCondition(
                 keyword,
