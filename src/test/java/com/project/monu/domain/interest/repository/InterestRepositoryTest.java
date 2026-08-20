@@ -1,6 +1,7 @@
 package com.project.monu.domain.interest.repository;
 
 import com.project.monu.domain.interest.entity.Interest;
+import com.project.monu.global.config.JpaAuditingConfig;
 import com.project.monu.global.config.QuerydslConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,7 +14,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
-@Import(QuerydslConfig.class)
+@Import({QuerydslConfig.class, JpaAuditingConfig.class})
 class InterestRepositoryTest {
 
     @Autowired
