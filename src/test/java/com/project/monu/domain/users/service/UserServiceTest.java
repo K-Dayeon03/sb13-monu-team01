@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,7 +25,6 @@ class UserServiceTest {
     UserCreateRequest request = new UserCreateRequest(
         "test@test.com",
         "테스트",
-        "password123!",
         "password123!"
     );
 
@@ -49,7 +49,6 @@ class UserServiceTest {
     UserCreateRequest request = new UserCreateRequest(
         "test@test.com",
         "새로운사용자",
-        "password123!",
         "password123!"
     );
 
@@ -58,5 +57,24 @@ class UserServiceTest {
     assertThatThrownBy(() -> userService.create(request))
         .isInstanceOf(BusinessException.class)
         .hasMessage("이미 존재하는 이메일입니다.");
+  }
+
+  // password test Encoder
+  @Test
+  void 회원가입_시_비밀번호가_암호화되어_저장된다() {
+    UserCreateRequest request = new UserCreateRequest(
+        "test@test.com",
+        "테스트",
+        "password123!"
+    );
+
+    when(userRepository.save(any(User.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    userService.create(request);
+
+    verify(userRepository).save(argThat(user ->
+        !user.getPassword().equals(request.password())
+    ));
   }
 }
