@@ -13,6 +13,19 @@ public enum ErrorCode {
       "EMAIL_DUPLICATION",
       "이미 존재하는 이메일입니다."
   ),
+
+  NOTIFICATION_NOT_FOUND(
+          HttpStatus.NOT_FOUND,
+          "NOTIFICATION_NOT_FOUND",
+          "알림을 찾을 수 없습니다."
+  ),
+
+  NOTIFICATION_ACCESS_DENIED(
+          HttpStatus.FORBIDDEN,
+          "NOTIFICATION_ACCESS_DENIED",
+          "해당 알림에 접근할 수 없습니다."
+  ),
+
   USER_NOT_FOUND(
           HttpStatus.NOT_FOUND,
           "USER_NOT_FOUND",
