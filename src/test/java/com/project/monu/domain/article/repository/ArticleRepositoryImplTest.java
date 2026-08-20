@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -195,6 +196,64 @@ class ArticleRepositoryImplTest {
     }
 
     @Test
+    void 발행일이_같으면_ID_내림차순으로_정렬된다() {
+        // given
+        ArticleSource source = source("NAVER");
+        Article first = article(source, "같은 발행일 기사1", "요약", "2026-08-18T00:00:00Z", 1L, 10L);
+        Article second = article(source, "같은 발행일 기사2", "요약", "2026-08-18T00:00:00Z", 1L, 10L);
+        Article third = article(source, "같은 발행일 기사3", "요약", "2026-08-18T00:00:00Z", 1L, 10L);
+        flushAndClear();
+
+        ArticleSearchCondition condition = condition(
+                null, null, null, null, null,
+                ArticleSortType.PUBLISH_DATE, null, null, 10
+        );
+
+        List<UUID> expectedIds = List.of(first, second, third).stream()
+                .map(Article::getId)
+                .sorted(Comparator.comparing(UUID::toString).reversed())
+                .toList();
+
+        // when
+        List<Article> result = articleRepository.searchByCursor(condition);
+
+        // then
+        assertThat(result).extracting(Article::getId)
+                .containsExactlyElementsOf(expectedIds);
+    }
+
+    @Test
+    void 발행일이_같은_경우_ID_커서로_다음_기사를_조회한다() {
+        // given
+        ArticleSource source = source("NAVER");
+        Article first = article(source, "같은 발행일 기사1", "요약", "2026-08-18T00:00:00Z", 1L, 10L);
+        Article second = article(source, "같은 발행일 기사2", "요약", "2026-08-18T00:00:00Z", 1L, 10L);
+        flushAndClear();
+
+        UUID cursorId = List.of(first.getId(), second.getId()).stream()
+                .max(Comparator.comparing(UUID::toString))
+                .orElseThrow();
+        UUID expectedId = List.of(first.getId(), second.getId()).stream()
+                .min(Comparator.comparing(UUID::toString))
+                .orElseThrow();
+
+        ArticleSearchCondition condition = condition(
+                null, null, null, null, null,
+                ArticleSortType.PUBLISH_DATE,
+                Instant.parse("2026-08-18T00:00:00Z"),
+                cursorId.toString(),
+                10
+        );
+
+        // when
+        List<Article> result = articleRepository.searchByCursor(condition);
+
+        // then
+        assertThat(result).extracting(Article::getId)
+                .containsExactly(expectedId);
+    }
+
+    @Test
     void 발행일_커서_이후의_기사를_조회한다() {
         // given
         ArticleSource source = source("NAVER");
@@ -245,6 +304,37 @@ class ArticleRepositoryImplTest {
     }
 
     @Test
+    void 댓글수가_같은_경우_ID_커서로_다음_기사를_조회한다() {
+        // given
+        ArticleSource source = source("NAVER");
+        Article first = article(source, "댓글수 같은 기사1", "요약", "2026-08-18T00:00:00Z", 50L, 10L);
+        Article second = article(source, "댓글수 같은 기사2", "요약", "2026-08-17T00:00:00Z", 50L, 10L);
+        flushAndClear();
+
+        UUID cursorId = List.of(first.getId(), second.getId()).stream()
+                .max(Comparator.comparing(UUID::toString))
+                .orElseThrow();
+        UUID expectedId = List.of(first.getId(), second.getId()).stream()
+                .min(Comparator.comparing(UUID::toString))
+                .orElseThrow();
+
+        ArticleSearchCondition condition = condition(
+                null, null, null, null, null,
+                ArticleSortType.COMMENT_COUNT,
+                null,
+                "50_" + cursorId,
+                10
+        );
+
+        // when
+        List<Article> result = articleRepository.searchByCursor(condition);
+
+        // then
+        assertThat(result).extracting(Article::getId)
+                .containsExactly(expectedId);
+    }
+
+    @Test
     void 조회수_기준으로_내림차순_정렬된다() {
         // given
         ArticleSource source = source("NAVER");
@@ -289,6 +379,37 @@ class ArticleRepositoryImplTest {
         // then
         assertThat(result).extracting(Article::getId)
                 .containsExactly(middle.getId(), low.getId());
+    }
+
+    @Test
+    void 조회수가_같은_경우_ID_커서로_다음_기사를_조회한다() {
+        // given
+        ArticleSource source = source("NAVER");
+        Article first = article(source, "조회수 같은 기사1", "요약", "2026-08-18T00:00:00Z", 1L, 50L);
+        Article second = article(source, "조회수 같은 기사2", "요약", "2026-08-17T00:00:00Z", 1L, 50L);
+        flushAndClear();
+
+        UUID cursorId = List.of(first.getId(), second.getId()).stream()
+                .max(Comparator.comparing(UUID::toString))
+                .orElseThrow();
+        UUID expectedId = List.of(first.getId(), second.getId()).stream()
+                .min(Comparator.comparing(UUID::toString))
+                .orElseThrow();
+
+        ArticleSearchCondition condition = condition(
+                null, null, null, null, null,
+                ArticleSortType.VIEW_COUNT,
+                null,
+                "50_" + cursorId,
+                10
+        );
+
+        // when
+        List<Article> result = articleRepository.searchByCursor(condition);
+
+        // then
+        assertThat(result).extracting(Article::getId)
+                .containsExactly(expectedId);
     }
 
     @Test
