@@ -2,17 +2,23 @@ package com.project.monu.domain.batch.config;
 
 import com.project.monu.domain.article.service.ArticleCollectService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.batch.core.configuration.annotation.EnableJdbcJobRepository;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.infrastructure.repeat.RepeatStatus;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
+@EnableBatchProcessing
+@EnableJdbcJobRepository
+@ConditionalOnProperty(name = "batch.enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class ArticleCollectJobConfig {
 

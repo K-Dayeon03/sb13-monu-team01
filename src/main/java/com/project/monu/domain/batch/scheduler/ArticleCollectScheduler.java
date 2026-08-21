@@ -20,7 +20,7 @@ public class ArticleCollectScheduler {
     private final JobOperator jobOperator;
     private final Job articleCollectJob;
 
-    @Scheduled(cron = "0 0 * * * *")
+    @Scheduled(cron = "0 0 * * * *", zone = "Asia/Seoul")
     public void runCollectJob() {
         try {
             JobParameters params = new JobParametersBuilder()
