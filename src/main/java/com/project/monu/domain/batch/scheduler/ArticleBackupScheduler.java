@@ -13,33 +13,33 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @ConditionalOnProperty(name = "batch.scheduler.enabled", havingValue = "true")
-public class ArticleCollectScheduler {
+public class ArticleBackupScheduler {
 
     private final JobOperator jobOperator;
-    private final Job articleCollectJob;
+    private final Job articleBackupJob;
 
-    public ArticleCollectScheduler(
+    public ArticleBackupScheduler(
             JobOperator jobOperator,
-            @Qualifier("articleCollectJob") Job articleCollectJob
+            @Qualifier("articleBackupJob") Job articleBackupJob
     ) {
-        // Job Bean이 2개 이상이므로 수집 스케줄러는 articleCollectJob만 실행하도록 고정합니다.
+        // 스케줄러에서도 Job Bean을 이름으로 지정해 수집 Job이 잘못 실행되지 않게 합니다.
         this.jobOperator = jobOperator;
-        this.articleCollectJob = articleCollectJob;
+        this.articleBackupJob = articleBackupJob;
     }
 
-    @Scheduled(cron = "0 0 * * * *", zone = "Asia/Seoul")
-    public void runCollectJob() {
+    // 매일 새벽 1시에 전날 기사 데이터를 백업합니다.
+    @Scheduled(cron = "0 0 1 * * *", zone = "Asia/Seoul")
+    public void runBackupJob() {
         try {
             // 같은 JobInstance 재실행 오류를 피하려고 스케줄 실행마다 timestamp를 새로 넣습니다.
             JobParameters params = new JobParametersBuilder()
                     .addLong("timestamp", System.currentTimeMillis())
                     .toJobParameters();
 
-            jobOperator.start(articleCollectJob, params);
-            log.info(">>> 기사 수집 배치 스케줄 실행");
+            jobOperator.start(articleBackupJob, params);
+            log.info(">>> 기사 백업 배치 스케줄 실행");
         } catch (Exception e) {
-            log.error("기사 수집 배치 스케줄 실행 실패", e);
+            log.error("기사 백업 배치 스케줄 실행 실패", e);
         }
-
     }
 }

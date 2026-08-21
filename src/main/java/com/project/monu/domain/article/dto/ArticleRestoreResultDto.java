@@ -1,35 +1,16 @@
 package com.project.monu.domain.article.dto;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
-
+import java.time.LocalDate;
 
 /**
- * 기사 복구 DTO
+ * 복구 실행 결과를 내려주는 DTO입니다.
  *
- * 백업(S3) 데이터와 현재 DB 데이터를 비교해 유실된 기사를 복구
- *
- * @param restoreDate 복구 대상 날짜
- * @param restoredArticleIds 복구된 기사 ID 목록
- * @param restoredArticleCount 복구된 기사 수
+ * 복구는 백업 파일과 현재 DB를 비교해 "새로 저장한 기사 수"가 핵심 결과이므로,
+ * 복구 대상 날짜, 사용한 백업 key, 복구 건수를 함께 내려줍니다.
  */
-
-
 public record ArticleRestoreResultDto(
-        Instant restoreDate,
-        List<UUID> restoredArticleIds,
+        LocalDate restoreDate,
+        String backupKey,
         long restoredArticleCount
 ) {
-
-
-    public static ArticleRestoreResultDto of(Instant restoreDate,
-                                             List<UUID> restoredArticleIds) {
-        return new ArticleRestoreResultDto(
-                restoreDate,
-                restoredArticleIds,
-                restoredArticleIds.size()
-        );
-    }
-
 }

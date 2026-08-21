@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/monu
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+  batch:
+    job:
+      enabled: false
+
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:org/springframework/batch/core/schema-postgresql.sql
+      continue-on-error: true
+
+batch:
+  enabled: true
+  scheduler:
+    enabled: false
+
+naver:
+  api:
+    client-id: ${NAVER_CLIENT_ID:test-client-id}
+    client-secret: ${NAVER_CLIENT_SECRET:test-client-secret}
