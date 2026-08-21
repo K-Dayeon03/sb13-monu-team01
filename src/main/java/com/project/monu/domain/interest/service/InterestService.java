@@ -151,4 +151,14 @@ public class InterestService {
         }
         return Math.min(requestedSize, MAX_PAGE_SIZE);
     }
+
+    @Transactional
+    public void unsubscribe(UUID userId, UUID interestId) {
+        Subscription subscription = subscriptionRepository.findByUserIdAndInterest_Id(userId, interestId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+
+        subscriptionRepository.delete(subscription);
+        subscription.getInterest().decreaseSubscriberCount();
+    }
+
 }
