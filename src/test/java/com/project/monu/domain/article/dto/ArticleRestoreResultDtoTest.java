@@ -2,27 +2,24 @@ package com.project.monu.domain.article.dto;
 
 import org.junit.jupiter.api.Test;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ArticleRestoreResultDtoTest {
 
     @Test
-    void 복구된_기사_ID_목록으로_복구_결과_DTO를_생성한다() {
+    void 복구_대상_날짜와_백업_key와_복구_건수를_담는다() {
         // given
-        // 복구 작업이 끝난 뒤, 복구된 기사 ID 목록만 알면 응답용 count는 DTO에서 계산합니다.
-        Instant restoreDate = Instant.parse("2026-08-19T00:00:00Z");
-        List<UUID> restoredArticleIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+        LocalDate restoreDate = LocalDate.of(2026, 8, 20);
+        String backupKey = "article-backups/2026-08-20.jsonl";
 
         // when
-        ArticleRestoreResultDto dto = ArticleRestoreResultDto.of(restoreDate, restoredArticleIds);
+        ArticleRestoreResultDto dto = new ArticleRestoreResultDto(restoreDate, backupKey, 2);
 
         // then
         assertThat(dto.restoreDate()).isEqualTo(restoreDate);
-        assertThat(dto.restoredArticleIds()).containsExactlyElementsOf(restoredArticleIds);
+        assertThat(dto.backupKey()).isEqualTo(backupKey);
         assertThat(dto.restoredArticleCount()).isEqualTo(2);
     }
 }

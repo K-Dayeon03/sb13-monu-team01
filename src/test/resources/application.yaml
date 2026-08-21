@@ -2,3 +2,11 @@ naver:
   api:
     client-id: test-client-id
     client-secret: test-client-secret
+spring:
+  batch:
+    job:
+      enabled: false
+batch:
+  enabled: true
+  scheduler:
+    enabled: false

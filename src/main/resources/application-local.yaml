@@ -1,0 +1,43 @@
+spring:
+  datasource:
+    # local 프로필은 PostgreSQL로 애플리케이션을 띄워 백업 배치를 직접 테스트할 때 사용합니다.
+    # 필요하면 실행 시 DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD 환경변수로 값을 바꿀 수 있습니다.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:monu}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # 로컬 테스트 편의를 위해 엔티티 기준으로 테이블을 자동 반영합니다.
+      # 운영 환경에서는 validate 또는 마이그레이션 도구 사용을 권장합니다.
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+  batch:
+    job:
+      # Job은 서버 시작 시 자동 실행하지 않고, /api/batch/backup 같은 수동 API나 스케줄러가 실행합니다.
+      enabled: false
+
+  sql:
+    init:
+      # Spring Boot 4.1에서는 spring.batch.jdbc.initialize-schema가 설정 메타데이터에 없습니다.
+      # 그래서 로컬 PostgreSQL에서는 Spring Batch가 제공하는 schema-postgresql.sql을 SQL init으로 직접 실행합니다.
+      mode: always
+      schema-locations: classpath:org/springframework/batch/core/schema-postgresql.sql
+      # 팀원 PC에서 이미 BATCH_* 테이블이 만들어져 있어도 로컬 서버가 뜨도록 중복 생성 오류는 넘깁니다.
+      continue-on-error: true
+
+batch:
+  enabled: true
+  scheduler:
+    # 수동 테스트 중에는 스케줄러가 자동으로 돌지 않게 꺼둡니다.
+    enabled: false
+
+naver:
+  api:
+    # 백업 배치만 테스트할 때는 실제 Naver API 키가 필요 없어서 기본 테스트 값을 둡니다.
+    client-id: ${NAVER_CLIENT_ID:test-client-id}
+    client-secret: ${NAVER_CLIENT_SECRET:test-client-secret}
