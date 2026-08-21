@@ -113,5 +113,22 @@ class NaverArticleMapperTest {
         // then
         assertThat(result.title()).isEqualTo("\"한 바구니에 담지 마라\"");
     }
+    
+    @Test
+    @DisplayName("요약의 HTML도 정리한다")
+    void 요약의_HTML이_정리된다() {
+        NaverArticleMapper mapper = new NaverArticleMapper();
+        NaverNewsResponse.Item item = new NaverNewsResponse.Item(
+                "제목",
+                "https://example.com/news/1",
+                "https://n.news.naver.com/1",
+                "삼성 <b>반도체</b> &quot;신기록&quot;",  // 태그+엔티티 낀 요약
+                "Thu, 13 Aug 2026 19:18:00 +0900"
+        );
+
+        CollectedArticle result = mapper.toCollectedArticle(item);
+
+        assertThat(result.summary()).isEqualTo("삼성 반도체 \"신기록\"");
+    }
 
 }

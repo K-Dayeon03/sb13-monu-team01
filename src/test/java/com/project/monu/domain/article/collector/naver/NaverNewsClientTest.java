@@ -45,10 +45,6 @@ class NaverNewsClientTest {
             log.info("링크: {}", item.originalLink());
             log.info("날짜: {}", item.pubDate());
             log.info("---");
-            System.out.println("제목: " + item.title());
-            System.out.println("링크: " + item.originalLink());
-            System.out.println("날짜: " + item.pubDate());
-            System.out.println("---");
         });
     }
 }

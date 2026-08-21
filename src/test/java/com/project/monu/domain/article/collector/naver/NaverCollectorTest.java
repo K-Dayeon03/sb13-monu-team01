@@ -57,4 +57,19 @@ class NaverCollectorTest {
         assertThat(result.get(1).originalLink()).isEqualTo("https://example.com/2");
     }
 
+    @Test
+    @DisplayName("검색 결과가 없으면 빈 리스트를 반환한다")
+    void 검색결과가_없으면_빈_리스트를_반환한다 () {
+        NaverNewsResponse emptyResponse = new NaverNewsResponse(
+                0, 1, 0, List.of()   // items 비어있음
+        );
+        when(naverNewsClient.search("없는키워드")).thenReturn(emptyResponse);
+
+        // when
+        List<CollectedArticle> result = naverCollector.collect("없는키워드");
+
+        // then
+        assertThat(result).isEmpty();
+    }
+
 }

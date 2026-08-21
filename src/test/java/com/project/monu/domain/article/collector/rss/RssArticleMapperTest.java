@@ -64,4 +64,42 @@ class RssArticleMapperTest {
         assertThat(result.summary()).isNull(); // null로 처리
         assertThat(result.title()).isEqualTo("제목");
     }
+
+    @Test
+    @DisplayName("제목과 요약의 HTML 태그 엔티티가 정리된다")
+    void HTML이_정리된다() {
+        // given
+        SyndEntry entry = mock(SyndEntry.class);
+        SyndContent description = mock(SyndContent.class);
+        Instant publishedAt = Instant.parse("2026-08-19T06:00:00Z");
+
+        when(entry.getTitle()).thenReturn("삼성 <b>반도체</b> &quot;신기록&quot;");
+        when(entry.getLink()).thenReturn("https://example.com/1");
+        when(entry.getDescription()).thenReturn(description);
+        when(description.getValue()).thenReturn("&#60;출연&#62; 내용&nbsp;입니다");
+        when(entry.getPublishedDate()).thenReturn(Date.from(publishedAt));
+
+        // when
+        CollectedArticle result = mapper.toCollectedArticle(entry);
+
+        // then
+        assertThat(result.title()).isEqualTo("삼성 반도체 \"신기록\"");
+        assertThat(result.summary()).isEqualTo("<출연> 내용\u00A0입니다");
+    }
+    
+    @Test
+    @DisplayName("발행일이 없으면 현재 시각으로 대체한다")
+    void 발행일이_없으면_현재시각() {
+
+        SyndEntry entry = mock(SyndEntry.class);
+        when(entry.getTitle()).thenReturn("제목");
+        when(entry.getLink()).thenReturn("https://example.com/1");
+        when(entry.getDescription()).thenReturn(null);
+        when(entry.getPublishedDate()).thenReturn(null);  // 발행일 없음
+
+        CollectedArticle result = mapper.toCollectedArticle(entry);
+
+        assertThat(result.publishedAt()).isNotNull();  // 현재 시각으로 채워짐
+        
+    }
 }
