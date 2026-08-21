@@ -11,10 +11,11 @@ import com.project.monu.domain.comment.repository.CommentLikeRepository;
 import com.project.monu.domain.comment.repository.CommentRepository;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -73,5 +74,25 @@ public class BasicCommentService implements CommentService {
 
     @Override
     public void unlike(UUID commentId, UUID requestUserId) {
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CommentDto> getComments(UUID articleId) {
+
+        List<Comment> comments = commentRepository.findAllActiveByArticleId(articleId);
+
+        return comments.stream()
+                .map(comment -> new CommentDto(
+                        comment.getId(),
+                        comment.getArticle().getId(),
+                        comment.getUser().getId(),
+                        comment.getUser().getNickname(),
+                        comment.getContent(),
+                        0L,
+                        false,
+                        comment.getCreatedAt()
+                ))
+                .toList();
     }
 }
