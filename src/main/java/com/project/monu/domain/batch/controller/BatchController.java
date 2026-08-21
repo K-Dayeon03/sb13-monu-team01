@@ -9,6 +9,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 기사 수집을 수동으로 처리 합니다.
+ * postman -> (POST) http://localhost:8080/api/batch
+ */
+
+
 @RestController
 @RequestMapping("/api/batch")
 @RequiredArgsConstructor
