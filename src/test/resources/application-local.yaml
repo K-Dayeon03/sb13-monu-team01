@@ -1,33 +1,35 @@
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/monu
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
-    driver-class-name: org.postgresql.Driver
+#개인 로컬에서는 설정이 다를 수 있어서 혹시 몰라 주석처리로 올립니다.
 
-  jpa:
-    hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        format_sql: true
-
-  batch:
-    job:
-      enabled: false
-
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:org/springframework/batch/core/schema-postgresql.sql
-      continue-on-error: true
-
-batch:
-  enabled: true
-  scheduler:
-    enabled: false
-
-naver:
-  api:
-    client-id: ${NAVER_CLIENT_ID:test-client-id}
-    client-secret: ${NAVER_CLIENT_SECRET:test-client-secret}
+#spring:
+#  datasource:
+#    url: jdbc:postgresql://localhost:5432/monu
+#    username: ${DB_USERNAME}
+#    password: ${DB_PASSWORD}
+#    driver-class-name: org.postgresql.Driver
+#
+#  jpa:
+#    hibernate:
+#      ddl-auto: update
+#    properties:
+#      hibernate:
+#        format_sql: true
+#
+#  batch:
+#    job:
+#      enabled: false
+#
+#  sql:
+#    init:
+#      mode: always
+#      schema-locations: classpath:org/springframework/batch/core/schema-postgresql.sql
+#      continue-on-error: true
+#
+#batch:
+#  enabled: true
+#  scheduler:
+#    enabled: false
+#
+#naver:
+#  api:
+#    client-id: ${NAVER_CLIENT_ID:test-client-id}
+#    client-secret: ${NAVER_CLIENT_SECRET:test-client-secret}
