@@ -1,11 +1,15 @@
 package com.project.monu.domain.interest.service;
 
 import com.project.monu.domain.interest.dto.request.InterestRegisterRequest;
+import com.project.monu.domain.interest.dto.request.InterestSearchCondition;
+import com.project.monu.domain.interest.dto.request.InterestSortType;
 import com.project.monu.domain.interest.dto.response.InterestDto;
 import com.project.monu.domain.interest.dto.response.SubscriptionDto;
 import com.project.monu.domain.interest.entity.Interest;
+import com.project.monu.domain.interest.entity.Keyword;
 import com.project.monu.domain.interest.repository.InterestRepository;
 import com.project.monu.domain.interest.repository.SubscriptionRepository;
+import com.project.monu.global.dto.CursorPageResponse;
 import com.project.monu.global.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -123,4 +127,50 @@ class InterestServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("이미 구독 중인 관심사입니다.");
     }
+
+    @Test
+    @DisplayName("조건에 맞는 관심사 목록을 커서 페이지 응답으로 반환한다")
+    void getInterests_returnsPagedResponse() {
+        // given
+        InterestSearchCondition condition = new InterestSearchCondition(null, InterestSortType.SUBSCRIBER_COUNT, null, 10);
+
+        Interest interest = Interest.create("인공지능");
+        interest.addKeyword(Keyword.of("AI"));
+
+        when(interestRepository.searchByCursor(any())).thenReturn(List.of(interest));
+        when(interestRepository.countByCondition(any())).thenReturn(1L);
+
+        // when
+        CursorPageResponse<InterestDto> response = interestService.getInterests(condition);
+
+        // then
+        assertThat(response.content()).hasSize(1);
+        assertThat(response.content().get(0).name()).isEqualTo("인공지능");
+        assertThat(response.hasNext()).isFalse();
+        assertThat(response.totalElements()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("조회 결과가 size보다 많으면 hasNext가 true이고 초과분은 잘린다")
+    void getInterests_setsHasNextTrue_whenMoreThanSizeResults() {
+        // given
+        InterestSearchCondition condition = new InterestSearchCondition(null, InterestSortType.SUBSCRIBER_COUNT, null, 1);
+
+        Interest first = Interest.create("인공지능");
+        Interest second = Interest.create("스포츠");
+        ReflectionTestUtils.setField(first, "id", UUID.randomUUID());
+        ReflectionTestUtils.setField(second, "id", UUID.randomUUID());
+
+        when(interestRepository.searchByCursor(any())).thenReturn(List.of(first, second));
+        when(interestRepository.countByCondition(any())).thenReturn(2L);
+
+        // when
+        CursorPageResponse<InterestDto> response = interestService.getInterests(condition);
+
+        // then
+        assertThat(response.content()).hasSize(1);
+        assertThat(response.hasNext()).isTrue();
+        assertThat(response.nextCursor()).isNotNull();
+    }
+
 }

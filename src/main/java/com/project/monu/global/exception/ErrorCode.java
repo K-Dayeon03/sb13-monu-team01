@@ -15,6 +15,34 @@ public enum ErrorCode {
   ),
 
   /*
+   * 사용자 관리 - 로그인
+   * 존재하지 않는 이메일이거나 비밀번호가 일치하지 않는 경우 사용합니다.
+   */
+  LOGIN_FAILED(
+          HttpStatus.UNAUTHORIZED,
+          "LOGIN_FAILED",
+          "이메일 또는 비밀번호가 올바르지 않습니다."
+  ),
+
+  NOTIFICATION_NOT_FOUND(
+          HttpStatus.NOT_FOUND,
+          "NOTIFICATION_NOT_FOUND",
+          "알림을 찾을 수 없습니다."
+  ),
+
+  NOTIFICATION_ACCESS_DENIED(
+          HttpStatus.FORBIDDEN,
+          "NOTIFICATION_ACCESS_DENIED",
+          "해당 알림에 접근할 수 없습니다."
+  ),
+
+  USER_NOT_FOUND(
+          HttpStatus.NOT_FOUND,
+          "USER_NOT_FOUND",
+          "사용자를 찾을 수 없습니다."
+  ),
+
+  /*
    * 관심사 관리 - 관심사 등록
    * 기존 관심사와 80% 이상 유사한 이름으로 등록을 시도한 경우 사용합니다.
    */
@@ -26,20 +54,20 @@ public enum ErrorCode {
 
   INTEREST_NOT_FOUND(
           HttpStatus.NOT_FOUND,
-      "INTEREST_NOT_FOUND",
-              "관심사를 찾을 수 없습니다."
+          "INTEREST_NOT_FOUND",
+          "관심사를 찾을 수 없습니다."
   ),
 
   SUBSCRIPTION_ALREADY_EXISTS(
           HttpStatus.CONFLICT,
-      "SUBSCRIPTION_DUPLICATION",
-              "이미 구독 중인 관심사입니다."
+          "SUBSCRIPTION_DUPLICATION",
+          "이미 구독 중인 관심사입니다."
   ),
 
   SUBSCRIPTION_NOT_FOUND(
           HttpStatus.NOT_FOUND,
-      "SUBSCRIPTION_NOT_FOUND",
-              "구독 내역을 찾을 수 없습니다."
+          "SUBSCRIPTION_NOT_FOUND",
+          "구독 내역을 찾을 수 없습니다."
   );
 
   private final HttpStatus status;

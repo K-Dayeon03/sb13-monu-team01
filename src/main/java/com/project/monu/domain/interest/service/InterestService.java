@@ -1,6 +1,8 @@
 package com.project.monu.domain.interest.service;
 
 import com.project.monu.domain.interest.dto.request.InterestRegisterRequest;
+import com.project.monu.domain.interest.dto.request.InterestSearchCondition;
+import com.project.monu.domain.interest.dto.request.InterestSortType;
 import com.project.monu.domain.interest.dto.response.InterestDto;
 import com.project.monu.domain.interest.dto.response.SubscriptionDto;
 import com.project.monu.domain.interest.entity.Interest;
@@ -9,6 +11,7 @@ import com.project.monu.domain.interest.entity.Subscription;
 import com.project.monu.domain.interest.repository.InterestRepository;
 import com.project.monu.domain.interest.repository.SubscriptionRepository;
 import com.project.monu.domain.interest.util.InterestSimilarityCalculator;
+import com.project.monu.global.dto.CursorPageResponse;
 import com.project.monu.global.exception.BusinessException;
 import com.project.monu.global.exception.ErrorCode;
 import org.springframework.stereotype.Service;
@@ -19,6 +22,9 @@ import java.util.UUID;
 
 @Service
 public class InterestService {
+
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final InterestRepository interestRepository;
     private final SubscriptionRepository subscriptionRepository;
@@ -43,6 +49,39 @@ public class InterestService {
         Interest saved = interestRepository.save(interest);
 
         return toDto(saved, false);
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPageResponse<InterestDto> getInterests(InterestSearchCondition condition) {
+        int size = normalizeSize(condition.size());
+        InterestSearchCondition normalizedCondition = new InterestSearchCondition(
+                condition.keyword(),
+                condition.sortType(),
+                condition.nextCursor(),
+                size
+        );
+
+        List<Interest> interests = interestRepository.searchByCursor(normalizedCondition);
+
+        boolean hasNext = interests.size() > size;
+        if (hasNext) {
+            interests = interests.subList(0, size);
+        }
+
+        List<InterestDto> content = interests.stream()
+                .map(interest -> toDto(interest, false))
+                .toList();
+
+        Interest lastInterest = interests.isEmpty() ? null : interests.get(interests.size() - 1);
+
+        return new CursorPageResponse<>(
+                content,
+                hasNext ? createNextCursor(lastInterest, normalizedCondition.sortType()) : null,
+                null,
+                size,
+                interestRepository.countByCondition(normalizedCondition),
+                hasNext
+        );
     }
 
     @Transactional
@@ -89,5 +128,27 @@ public class InterestService {
                 interest.getSubscriberCount(),
                 subscription.getCreatedAt()
         );
+    }
+
+    private String createNextCursor(Interest interest, InterestSortType sortType) {
+        if (interest == null) {
+            return null;
+        }
+
+        InterestSortType resolvedSortType = sortType == null
+                ? InterestSortType.SUBSCRIBER_COUNT
+                : sortType;
+
+        return switch (resolvedSortType) {
+            case SUBSCRIBER_COUNT -> interest.getSubscriberCount() + "_" + interest.getId();
+            case NAME -> interest.getName() + "_" + interest.getId();
+        };
+    }
+
+    private int normalizeSize(int requestedSize) {
+        if (requestedSize <= 0) {
+            return DEFAULT_PAGE_SIZE;
+        }
+        return Math.min(requestedSize, MAX_PAGE_SIZE);
     }
 }
