@@ -1,5 +1,6 @@
 package com.project.monu.domain.interest.service;
 
+
 import com.project.monu.domain.interest.dto.request.InterestRegisterRequest;
 import com.project.monu.domain.interest.dto.request.InterestSearchCondition;
 import com.project.monu.domain.interest.dto.request.InterestSortType;
@@ -7,6 +8,7 @@ import com.project.monu.domain.interest.dto.response.InterestDto;
 import com.project.monu.domain.interest.dto.response.SubscriptionDto;
 import com.project.monu.domain.interest.entity.Interest;
 import com.project.monu.domain.interest.entity.Keyword;
+import com.project.monu.domain.interest.entity.Subscription;
 import com.project.monu.domain.interest.repository.InterestRepository;
 import com.project.monu.domain.interest.repository.SubscriptionRepository;
 import com.project.monu.global.dto.CursorPageResponse;
@@ -171,6 +173,42 @@ class InterestServiceTest {
         assertThat(response.content()).hasSize(1);
         assertThat(response.hasNext()).isTrue();
         assertThat(response.nextCursor()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("구독 중인 관심사를 구독취소하면 구독이 삭제되고 구독자 수가 감소한다")
+    void unsubscribe_success() {
+        // given
+        UUID userId = UUID.randomUUID();
+        Interest interest = Interest.create("인공지능");
+        ReflectionTestUtils.setField(interest, "id", UUID.randomUUID());
+        interest.increaseSubscriberCount();
+        Subscription subscription = Subscription.create(userId, interest);
+
+        when(subscriptionRepository.findByUserIdAndInterest_Id(userId, interest.getId()))
+                .thenReturn(Optional.of(subscription));
+
+        // when
+        interestService.unsubscribe(userId, interest.getId());
+
+        // then
+        assertThat(interest.getSubscriberCount()).isEqualTo(0L);
+        verify(subscriptionRepository).delete(subscription);
+    }
+
+    @Test
+    @DisplayName("구독하지 않은 관심사를 구독취소하면 예외가 발생한다")
+    void unsubscribe_throwsException_whenSubscriptionNotFound() {
+        // given
+        UUID userId = UUID.randomUUID();
+        UUID interestId = UUID.randomUUID();
+        when(subscriptionRepository.findByUserIdAndInterest_Id(userId, interestId))
+                .thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> interestService.unsubscribe(userId, interestId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("구독 내역을 찾을 수 없습니다.");
     }
 
 }
