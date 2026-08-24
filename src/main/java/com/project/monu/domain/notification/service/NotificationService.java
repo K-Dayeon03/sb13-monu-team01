@@ -3,11 +3,13 @@ package com.project.monu.domain.notification.service;
 import com.project.monu.domain.notification.dto.NotificationConfirmAllResponse;
 import com.project.monu.domain.notification.dto.NotificationResponse;
 import com.project.monu.domain.notification.entity.Notification;
+import com.project.monu.domain.notification.entity.NotificationResourceType;
 import com.project.monu.domain.notification.repository.NotificationRepository;
 import com.project.monu.global.dto.CursorPageResponse;
 import com.project.monu.global.exception.BusinessException;
 import com.project.monu.global.exception.ErrorCode;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private static final int DEFAULT_PAGE_SIZE = 10;
     private static final int MAX_PAGE_SIZE = 100;
+    private static final int OLD_NOTIFICATION_RETENTION_DAYS = 7;
 
     public NotificationService(NotificationRepository notificationRepository) {
         this.notificationRepository = notificationRepository;
@@ -100,5 +103,54 @@ public class NotificationService {
         notifications.forEach(notification -> notification.confirm(confirmedAt));
 
         return new NotificationConfirmAllResponse(notifications.size());
+    }
+
+    @Transactional
+    public long deleteOldConfirmedNotifications(Instant now) {
+        Instant threshold = now.minus(OLD_NOTIFICATION_RETENTION_DAYS, ChronoUnit.DAYS);
+
+        return notificationRepository.deleteByConfirmedTrueAndUpdatedAtBefore(threshold);
+    }
+
+    @Transactional
+    public void createCommentLikeNotification(
+            UUID commentAuthorId,
+            UUID likedByUserId,
+            String likedByUserNickname,
+            UUID commentId
+    ) {
+        if (commentAuthorId.equals(likedByUserId)) {
+            return;
+        }
+
+        Notification notification = Notification.create(
+                commentAuthorId,
+                likedByUserNickname + "님이 나의 댓글을 좋아합니다.",
+                NotificationResourceType.COMMENT,
+                commentId
+        );
+
+        notificationRepository.save(notification);
+    }
+
+    @Transactional
+    public void createInterestArticleNotifications(
+            UUID interestId,
+            String interestName,
+            int articleCount,
+            List<UUID> subscriberUserIds
+    ) {
+        String content = interestName + "와 관련된 기사가 " + articleCount + "건 등록되었습니다.";
+
+        List<Notification> notifications = subscriberUserIds.stream()
+                .map(subscriberUserId -> Notification.create(
+                        subscriberUserId,
+                        content,
+                        NotificationResourceType.INTEREST,
+                        interestId
+                ))
+                .toList();
+
+        notificationRepository.saveAll(notifications);
     }
 }
