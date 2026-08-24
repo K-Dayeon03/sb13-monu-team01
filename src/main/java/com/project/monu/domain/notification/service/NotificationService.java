@@ -3,6 +3,7 @@ package com.project.monu.domain.notification.service;
 import com.project.monu.domain.notification.dto.NotificationConfirmAllResponse;
 import com.project.monu.domain.notification.dto.NotificationResponse;
 import com.project.monu.domain.notification.entity.Notification;
+import com.project.monu.domain.notification.entity.NotificationResourceType;
 import com.project.monu.domain.notification.repository.NotificationRepository;
 import com.project.monu.global.dto.CursorPageResponse;
 import com.project.monu.global.exception.BusinessException;
@@ -109,5 +110,22 @@ public class NotificationService {
         Instant threshold = now.minus(OLD_NOTIFICATION_RETENTION_DAYS, ChronoUnit.DAYS);
 
         return notificationRepository.deleteByConfirmedTrueAndUpdatedAtBefore(threshold);
+    }
+
+    @Transactional
+    public void createCommentLikeNotification(
+            UUID commentAuthorId,
+            UUID likedByUserId,
+            String likedByUserNickname,
+            UUID commentId
+    ) {
+        Notification notification = Notification.create(
+                commentAuthorId,
+                likedByUserNickname + "님이 나의 댓글을 좋아합니다.",
+                NotificationResourceType.COMMENT,
+                commentId
+        );
+
+        notificationRepository.save(notification);
     }
 }
