@@ -2,6 +2,7 @@ package com.project.monu.domain.notification.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.project.monu.global.dto.CursorPageResponse;
@@ -164,5 +165,19 @@ class NotificationServiceTest {
         assertThat(response.size()).isEqualTo(100);
         assertThat(response.totalElements()).isZero();
         assertThat(response.hasNext()).isFalse();
+    }
+
+    @Test
+    void 일주일_지난_확인_알림을_삭제한다() {
+        Instant now = Instant.parse("2026-08-24T00:00:00Z");
+        Instant expectedThreshold = Instant.parse("2026-08-17T00:00:00Z");
+
+        when(notificationRepository.deleteByConfirmedTrueAndUpdatedAtBefore(expectedThreshold))
+                .thenReturn(5L);
+
+        long deletedCount = notificationService.deleteOldConfirmedNotifications(now);
+
+        assertThat(deletedCount).isEqualTo(5L);
+        verify(notificationRepository).deleteByConfirmedTrueAndUpdatedAtBefore(expectedThreshold);
     }
 }
