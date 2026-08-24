@@ -464,6 +464,38 @@ class ArticleRepositoryImplTest {
                 .hasMessage("Cursor must be formatted as 'value_articleId'.");
     }
 
+    @Test
+    void 논리_삭제된_기사는_DB에_남아있지만_일반_조회에서는_제외된다() {
+        // given
+        ArticleSource source = source("NAVER");
+
+        Article article = article(
+                source,
+                "삭제 대상 기사",
+                "삭제 대상 요약",
+                "2026-08-21T00:00:00Z",
+                0L,
+                0L
+        );
+
+        UUID articleId = article.getId();
+
+        // when
+        article.softDelete();
+        flushAndClear();
+
+        // then
+        assertThat(
+                articleRepository.findByIdAndDeletedAtIsNull(articleId)
+        ).isEmpty();
+
+        Article deletedArticle = articleRepository.findById(articleId)
+                .orElseThrow();
+
+        assertThat(deletedArticle.getDeletedAt()).isNotNull();
+        assertThat(deletedArticle.isDeleted()).isTrue();
+    }
+
     private ArticleSearchCondition condition(
             String keyword,
             UUID interestId,

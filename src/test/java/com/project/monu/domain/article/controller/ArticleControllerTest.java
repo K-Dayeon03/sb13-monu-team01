@@ -5,6 +5,9 @@ import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
 import com.project.monu.domain.article.dto.request.ArticleSortType;
 import com.project.monu.domain.article.service.ArticleService;
 import com.project.monu.global.dto.CursorPageResponse;
+import com.project.monu.global.exception.BusinessException;
+import com.project.monu.global.exception.ErrorCode;
+import com.project.monu.global.exception.GlobalHandlerException;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,8 +23,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -174,5 +177,65 @@ class ArticleControllerTest {
 
         mockMvc.perform(get("/api/articles"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 기사를_논리_삭제하면_204를_응답한다() throws Exception {
+        // given
+        MockMvc mockMvc = MockMvcBuilders
+                .standaloneSetup(articleController)
+                .build();
+
+        UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        // when & then
+        mockMvc.perform(delete("/api/articles/{articleId}", articleId)
+                        .header("MoNew-Request-User-ID", userId))
+                .andExpect(status().isNoContent());
+
+        verify(articleService).softDelete(articleId);
+
+    }
+
+    @Test
+    void 존재하지_않는_기사를_논리_삭제하면_404를_응답한다() throws Exception {
+        // given
+        MockMvc mockMvc = MockMvcBuilders
+                .standaloneSetup(articleController)
+                .setControllerAdvice(new GlobalHandlerException())
+                .build();
+
+        UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+
+        doThrow(new BusinessException(ErrorCode.ARTICLE_NOT_FOUND))
+                .when(articleService)
+                .softDelete(articleId);
+
+        // when & then
+        mockMvc.perform(delete("/api/articles/{articleId}", articleId)
+                        .header("MoNew-Request-User-ID", userId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ARTICLE_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("기사를 찾을 수 없습니다."))
+                .andExpect(jsonPath("$.status").value(404));
+
+        verify(articleService).softDelete(articleId);
+    }
+
+    @Test
+    void 헤더없이_삭제하면_400() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders
+                .standaloneSetup(articleController)
+                .build();
+
+        UUID articleId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/api/articles/{articleId}", articleId))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(articleService);
     }
 }

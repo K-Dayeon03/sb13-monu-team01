@@ -36,4 +36,17 @@ public class ArticleRestore {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "backup_id", nullable = false)
     private ArticleBackup backup;
+
+    protected ArticleRestore() {
+    }
+
+    private ArticleRestore(LocalDate restoreDate, Long restoredCount, ArticleBackup backup) {
+        this.restoreDate = restoreDate;
+        this.restoredCount = restoredCount;
+        this.backup = backup;
+    }
+
+    public static ArticleRestore create(LocalDate restoreDate, Long restoredCount, ArticleBackup backup) {
+        return new ArticleRestore(restoreDate, restoredCount, backup);
+    }
 }

@@ -53,4 +53,17 @@ class RssCollectorTest {
         assertThat(result).containsExactly(article1, article2);
     }
 
+    @Test
+    @DisplayName("피드에 항목이 없으면 빈 리스트를 반환한다")
+    void 피드가_비어있으면_빈_리스트() {
+        String rssUrl = "https://www.example.com/feed";
+        SyndFeed feed = Mockito.mock(SyndFeed.class);
+        when(rssClient.fetch(rssUrl)).thenReturn(feed);
+        when(feed.getEntries()).thenReturn(List.of());  // 빈 피드
+
+        List<CollectedArticle> result = rssCollector.collect(rssUrl);
+
+        assertThat(result).isEmpty();
+    }
+
 }

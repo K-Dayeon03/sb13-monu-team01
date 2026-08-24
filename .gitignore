@@ -6,6 +6,7 @@ build/
 !**/src/test/**/build/
 .DS_Store
 .env
+backups/
 ### STS ###
 .apt_generated
 .classpath
@@ -36,3 +37,4 @@ out/
 
 ### VS Code ###
 .vscode/
+application-postgres.yaml

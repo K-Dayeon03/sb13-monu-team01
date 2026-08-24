@@ -43,4 +43,22 @@ public class ArticleBackup {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    protected ArticleBackup() {
+    }
+
+    private ArticleBackup(LocalDate backupDate, String s3Bucket, String s3Key, Long articleCount) {
+        this.backupDate = backupDate;
+        this.s3Bucket = s3Bucket;
+        this.s3Key = s3Key;
+        this.articleCount = articleCount;
+    }
+
+    public static ArticleBackup create(LocalDate backupDate, String s3Bucket, String s3Key, Long articleCount) {
+        return new ArticleBackup(backupDate, s3Bucket, s3Key, articleCount);
+    }
+
+    public void updateArticleCount(Long articleCount) {
+        this.articleCount = articleCount;
+    }
 }
