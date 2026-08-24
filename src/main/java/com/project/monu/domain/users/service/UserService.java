@@ -2,11 +2,13 @@ package com.project.monu.domain.users.service;
 
 import com.project.monu.domain.users.dto.request.UserCreateRequest;
 import com.project.monu.domain.users.dto.request.UserLoginRequest;
+import com.project.monu.domain.users.dto.request.UserUpdateRequest;
 import com.project.monu.domain.users.dto.response.UserResponse;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.exception.BusinessException;
 import com.project.monu.global.exception.ErrorCode;
+import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -58,5 +60,25 @@ public class UserService {
     }
 
     return UserResponse.from(user);
+  }
+
+  public UserResponse update(
+      UUID userId,
+      UUID requestUserId,
+      UserUpdateRequest request
+  ) {
+
+    if (!userId.equals(requestUserId)) {
+      throw new BusinessException(ErrorCode.USER_UPDATE_ACCESS_DENIED);
+    }
+
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+    user.updateNickname(request.nickname());
+
+    User updatedUser = userRepository.save(user);
+
+    return UserResponse.from(updatedUser);
   }
 }

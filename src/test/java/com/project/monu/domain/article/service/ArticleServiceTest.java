@@ -5,7 +5,9 @@ import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
 import com.project.monu.domain.article.dto.request.ArticleSortType;
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.entity.ArticleSource;
+import com.project.monu.domain.article.entity.SourceType;
 import com.project.monu.domain.article.repository.ArticleRepository;
+import com.project.monu.domain.article.repository.ArticleSourceRepository;
 import com.project.monu.domain.article.repository.ArticleViewRepository;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.dto.CursorPageResponse;
@@ -33,6 +35,9 @@ class ArticleServiceTest {
 
     @Mock
     private ArticleRepository articleRepository;
+
+    @Mock
+    private ArticleSourceRepository articleSourceRepository;
 
     @Mock
     private ArticleViewRepository articleViewRepository;
@@ -234,6 +239,34 @@ class ArticleServiceTest {
                     assertThat(businessException.getErrorCode())
                             .isEqualTo(ErrorCode.ARTICLE_NOT_FOUND);
                 });
+    }
+
+    @Test
+    void 활성화된_기사_출처_이름_목록을_반환한다() {
+        // given
+        ArticleSource naver = ArticleSource.builder()
+                .name("NAVER")
+                .type(SourceType.API)
+                .sourceUrl("https://naver.example.com")
+                .build();
+
+        ArticleSource hankyung = ArticleSource.builder()
+                .name("HANKYUNG")
+                .type(SourceType.RSS)
+                .sourceUrl("https://hankyung.example.com/rss")
+                .build();
+
+        when(articleSourceRepository.findAllByEnabledTrue())
+                .thenReturn(List.of(naver, hankyung));
+
+        // when
+        List<String> result = articleService.getSources();
+
+        // then
+        assertThat(result)
+                .containsExactly("NAVER", "HANKYUNG");
+
+        verify(articleSourceRepository).findAllByEnabledTrue();
     }
 
     private ArticleSearchCondition condition(int size, ArticleSortType sortType) {

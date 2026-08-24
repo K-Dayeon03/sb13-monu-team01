@@ -56,7 +56,7 @@ public class BatchController {
                 .toJobParameters();
 
         jobOperator.start(articleCollectJob, params);
-        return "배치 실행 완료";
+        return "기사 수집 배치 실행 완료";
     }
 
     @PostMapping(value = "/backup", produces = "text/plain;charset=UTF-8")

@@ -2,7 +2,7 @@ package com.project.monu.domain.notification.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.project.monu.global.dto.CursorPageResponse;
 import com.project.monu.domain.notification.dto.NotificationConfirmAllResponse;
@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class NotificationServiceTest {
 
@@ -115,25 +116,6 @@ class NotificationServiceTest {
         assertThat(response.hasNext()).isFalse();
     }
 
-//    @Test
-//    void 미확인_알림이_limit보다_많으면_hasNext가_true다() {
-//        UUID userId = UUID.randomUUID();
-//        Notification firstNotification = createNotification(userId);
-//        Notification secondNotification = createNotification(userId);
-//        Notification extraNotification = createNotification(userId);
-//
-//        when(notificationRepository.findByUserIdAndConfirmedFalseOrderByCreatedAtDesc(userId))
-//                .thenReturn(List.of(firstNotification, secondNotification, extraNotification));
-//
-//        CursorPageResponse<NotificationResponse> response =
-//                notificationService.getNotifications(userId, 2);
-//
-//        assertThat(response.content()).hasSize(2);
-//        assertThat(response.size()).isEqualTo(2);
-//        assertThat(response.totalElements()).isEqualTo(3);
-//        assertThat(response.hasNext()).isTrue();
-//    }
-
     @Test
     void limit이_0보다_작거나_같으면_기본값_10으로_조회한다() {
         UUID userId = UUID.randomUUID();
@@ -164,5 +146,96 @@ class NotificationServiceTest {
         assertThat(response.size()).isEqualTo(100);
         assertThat(response.totalElements()).isZero();
         assertThat(response.hasNext()).isFalse();
+    }
+
+    @Test
+    void 일주일_지난_확인_알림을_삭제한다() {
+        Instant now = Instant.parse("2026-08-24T00:00:00Z");
+        Instant expectedThreshold = Instant.parse("2026-08-17T00:00:00Z");
+
+        when(notificationRepository.deleteByConfirmedTrueAndUpdatedAtBefore(expectedThreshold))
+                .thenReturn(5L);
+
+        long deletedCount = notificationService.deleteOldConfirmedNotifications(now);
+
+        assertThat(deletedCount).isEqualTo(5L);
+        verify(notificationRepository).deleteByConfirmedTrueAndUpdatedAtBefore(expectedThreshold);
+    }
+
+    @Test
+    void 댓글_좋아요_알림을_생성한다() {
+        UUID commentAuthorId = UUID.randomUUID();
+        UUID likedByUserId = UUID.randomUUID();
+        UUID commentId = UUID.randomUUID();
+
+        notificationService.createCommentLikeNotification(
+                commentAuthorId,
+                likedByUserId,
+                "김모뉴",
+                commentId
+        );
+
+        ArgumentCaptor<Notification> notificationCaptor =
+                ArgumentCaptor.forClass(Notification.class);
+
+        verify(notificationRepository).save(notificationCaptor.capture());
+
+        Notification savedNotification = notificationCaptor.getValue();
+
+        assertThat(savedNotification.getUserId()).isEqualTo(commentAuthorId);
+        assertThat(savedNotification.getContent()).isEqualTo("김모뉴님이 나의 댓글을 좋아합니다.");
+        assertThat(savedNotification.getResourceType()).isEqualTo(NotificationResourceType.COMMENT);
+        assertThat(savedNotification.getResourceId()).isEqualTo(commentId);
+        assertThat(savedNotification.isConfirmed()).isFalse();
+    }
+
+    @Test
+    void 관심사_기사_등록_알림을_구독자별로_생성한다() {
+        UUID interestId = UUID.randomUUID();
+        UUID firstSubscriberId = UUID.randomUUID();
+        UUID secondSubscriberId = UUID.randomUUID();
+
+        notificationService.createInterestArticleNotifications(
+                interestId,
+                "인공지능",
+                3,
+                List.of(firstSubscriberId, secondSubscriberId)
+        );
+
+        ArgumentCaptor<List<Notification>> notificationsCaptor =
+                ArgumentCaptor.forClass(List.class);
+
+        verify(notificationRepository).saveAll(notificationsCaptor.capture());
+
+        List<Notification> savedNotifications = notificationsCaptor.getValue();
+
+        assertThat(savedNotifications).hasSize(2);
+        assertThat(savedNotifications)
+                .extracting(Notification::getUserId)
+                .containsExactly(firstSubscriberId, secondSubscriberId);
+        assertThat(savedNotifications)
+                .extracting(Notification::getContent)
+                .containsOnly("인공지능와 관련된 기사가 3건 등록되었습니다.");
+        assertThat(savedNotifications)
+                .extracting(Notification::getResourceType)
+                .containsOnly(NotificationResourceType.INTEREST);
+        assertThat(savedNotifications)
+                .extracting(Notification::getResourceId)
+                .containsOnly(interestId);
+    }
+
+    @Test
+    void 자신의_댓글을_좋아요하면_알림을_생성하지_않는다() {
+        UUID userId = UUID.randomUUID();
+        UUID commentId = UUID.randomUUID();
+
+        notificationService.createCommentLikeNotification(
+                userId,
+                userId,
+                "김모뉴",
+                commentId
+        );
+
+        verify(notificationRepository, never()).save(any());
     }
 }

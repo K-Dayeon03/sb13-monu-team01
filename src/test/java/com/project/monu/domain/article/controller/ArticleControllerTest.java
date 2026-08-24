@@ -238,4 +238,33 @@ class ArticleControllerTest {
 
         verifyNoInteractions(articleService);
     }
+
+    @Test
+    void 기사_출처_목록을_조회하면_200을_응답한다() throws Exception {
+
+        // given
+        List<String> sources = List.of(
+                "NAVER",
+                "HANKYUNG",
+                "CHOSUN",
+                "YEONHAP"
+        );
+
+        when(articleService.getSources())
+                .thenReturn(sources);
+
+        MockMvc mockMvc = MockMvcBuilders
+                .standaloneSetup(articleController)
+                .build();
+
+        // when & then
+        mockMvc.perform(get("/api/articles/sources"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").value("NAVER"))
+                .andExpect(jsonPath("$[1]").value("HANKYUNG"))
+                .andExpect(jsonPath("$[2]").value("CHOSUN"))
+                .andExpect(jsonPath("$[3]").value("YEONHAP"));
+
+        verify(articleService).getSources();
+    }
 }

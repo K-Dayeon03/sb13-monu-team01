@@ -24,6 +24,12 @@ public enum ErrorCode {
           "이메일 또는 비밀번호가 올바르지 않습니다."
   ),
 
+  INVALID_INPUT_VALUE(
+      HttpStatus.BAD_REQUEST,
+      "INVALID_INPUT_VALUE",
+      "잘못된 입력값입니다."
+  ),
+
   NOTIFICATION_NOT_FOUND(
           HttpStatus.NOT_FOUND,
           "NOTIFICATION_NOT_FOUND",
@@ -40,6 +46,12 @@ public enum ErrorCode {
           HttpStatus.NOT_FOUND,
           "USER_NOT_FOUND",
           "사용자를 찾을 수 없습니다."
+  ),
+
+  USER_UPDATE_ACCESS_DENIED(
+      HttpStatus.FORBIDDEN,
+    "USER_UPDATE_ACCESS_DENIED",
+        "사용자 정보 수정 권한이 없습니다."
   ),
 
   /*

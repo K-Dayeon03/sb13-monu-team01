@@ -4,7 +4,9 @@ import com.project.monu.domain.article.dto.ArticleDto;
 import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
 import com.project.monu.domain.article.dto.request.ArticleSortType;
 import com.project.monu.domain.article.entity.Article;
+import com.project.monu.domain.article.entity.ArticleSource;
 import com.project.monu.domain.article.repository.ArticleRepository;
+import com.project.monu.domain.article.repository.ArticleSourceRepository;
 import com.project.monu.domain.article.repository.ArticleViewRepository;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.dto.CursorPageResponse;
@@ -26,6 +28,7 @@ public class ArticleService {
     private static final int MAX_PAGE_SIZE = 100;
 
     private final ArticleRepository articleRepository;
+    private final ArticleSourceRepository  articleSourceRepository;
     private final ArticleViewRepository articleViewRepository;
     private final UserRepository userRepository;
 
@@ -138,5 +141,11 @@ public class ArticleService {
                         new BusinessException(ErrorCode.ARTICLE_NOT_FOUND));
 
         article.softDelete();
+    }
+
+    public List<String> getSources() {
+        return articleSourceRepository.findAllByEnabledTrue().stream()
+                .map(ArticleSource::getName)
+                .toList();
     }
 }
