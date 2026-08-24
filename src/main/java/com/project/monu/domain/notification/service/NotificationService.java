@@ -115,9 +115,14 @@ public class NotificationService {
     @Transactional
     public void createCommentLikeNotification(
             UUID commentAuthorId,
+            UUID likedByUserId,
             String likedByUserNickname,
             UUID commentId
     ) {
+        if (commentAuthorId.equals(likedByUserId)) {
+            return;
+        }
+
         Notification notification = Notification.create(
                 commentAuthorId,
                 likedByUserNickname + "님이 나의 댓글을 좋아합니다.",
