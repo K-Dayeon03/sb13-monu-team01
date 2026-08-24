@@ -208,4 +208,39 @@ class NotificationServiceTest {
         assertThat(savedNotification.getResourceId()).isEqualTo(commentId);
         assertThat(savedNotification.isConfirmed()).isFalse();
     }
+
+    @Test
+    void 관심사_기사_등록_알림을_구독자별로_생성한다() {
+        UUID interestId = UUID.randomUUID();
+        UUID firstSubscriberId = UUID.randomUUID();
+        UUID secondSubscriberId = UUID.randomUUID();
+
+        notificationService.createInterestArticleNotifications(
+                interestId,
+                "인공지능",
+                3,
+                List.of(firstSubscriberId, secondSubscriberId)
+        );
+
+        ArgumentCaptor<List<Notification>> notificationsCaptor =
+                ArgumentCaptor.forClass(List.class);
+
+        verify(notificationRepository).saveAll(notificationsCaptor.capture());
+
+        List<Notification> savedNotifications = notificationsCaptor.getValue();
+
+        assertThat(savedNotifications).hasSize(2);
+        assertThat(savedNotifications)
+                .extracting(Notification::getUserId)
+                .containsExactly(firstSubscriberId, secondSubscriberId);
+        assertThat(savedNotifications)
+                .extracting(Notification::getContent)
+                .containsOnly("인공지능와 관련된 기사가 3건 등록되었습니다.");
+        assertThat(savedNotifications)
+                .extracting(Notification::getResourceType)
+                .containsOnly(NotificationResourceType.INTEREST);
+        assertThat(savedNotifications)
+                .extracting(Notification::getResourceId)
+                .containsOnly(interestId);
+    }
 }
