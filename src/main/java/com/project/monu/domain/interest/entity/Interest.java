@@ -37,6 +37,11 @@ public class Interest extends BaseEntity {
         keyword.assignInterest(this);
     }
 
+    public void updateKeywords(List<String> newKeywords) {
+        this.keywords.clear();
+        newKeywords.forEach(keyword -> addKeyword(Keyword.of(keyword)));
+    }
+
     public void increaseSubscriberCount() {
         this.subscriberCount++;
     }

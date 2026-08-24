@@ -1,6 +1,7 @@
 package com.project.monu.domain.interest.controller;
 
 import com.project.monu.domain.interest.dto.request.InterestRegisterRequest;
+import com.project.monu.domain.interest.dto.request.InterestUpdateRequest;
 import com.project.monu.domain.interest.dto.response.InterestDto;
 import com.project.monu.domain.interest.dto.response.SubscriptionDto;
 import com.project.monu.domain.interest.service.InterestService;
@@ -19,9 +20,12 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -55,6 +59,36 @@ class InterestControllerTest {
     }
 
     @Test
+    @DisplayName("관심사 수정 요청이 성공하면 200과 수정된 InterestDto를 반환한다")
+    void update_success() throws Exception {
+        // given
+        UUID interestId = UUID.randomUUID();
+        InterestUpdateRequest request = new InterestUpdateRequest(List.of("머신러닝"));
+        InterestDto response = new InterestDto(interestId, "인공지능", List.of("머신러닝"), 0L, false);
+        when(interestService.update(eq(interestId), any())).thenReturn(response);
+
+        // when & then
+        mockMvc.perform(patch("/api/interests/{interestId}", interestId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.keywords[0]").value("머신러닝"));
+    }
+
+    @Test
+    @DisplayName("관심사 삭제 요청이 성공하면 204를 반환한다")
+    void delete_success() throws Exception {
+        // given
+        UUID interestId = UUID.randomUUID();
+
+        // when & then
+        mockMvc.perform(delete("/api/interests/{interestId}", interestId))
+                .andExpect(status().isNoContent());
+
+        verify(interestService).delete(interestId);
+    }
+
+    @Test
     @DisplayName("관심사 목록 조회 요청이 성공하면 200과 커서 페이지 응답을 반환한다")
     void getInterests_success() throws Exception {
         // given
@@ -62,14 +96,30 @@ class InterestControllerTest {
         CursorPageResponse<InterestDto> response = new CursorPageResponse<>(
                 List.of(interestDto), null, null, 10, 1L, false
         );
-        when(interestService.getInterests(any())).thenReturn(response);
+        when(interestService.getInterests(any(), any())).thenReturn(response);
 
         // when & then
         mockMvc.perform(get("/api/interests")
-                        .param("keyword", "인공"))
+                        .param("keyword", "인공")
+                        .param("orderBy", "subscriberCount")
+                        .param("direction", "DESC")
+                        .param("limit", "10")
+                        .header("Monew-Request-User-ID", UUID.randomUUID().toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].name").value("인공지능"))
                 .andExpect(jsonPath("$.hasNext").value(false));
+    }
+
+    @Test
+    @DisplayName("관심사 목록 조회 시 orderBy 값이 잘못되면 400을 반환한다")
+    void getInterests_returnsBadRequest_whenOrderByIsInvalid() throws Exception {
+        // when & then
+        mockMvc.perform(get("/api/interests")
+                        .param("orderBy", "invalid")
+                        .param("direction", "DESC")
+                        .param("limit", "10")
+                        .header("Monew-Request-User-ID", UUID.randomUUID().toString()))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -91,7 +141,7 @@ class InterestControllerTest {
     }
 
     @Test
-    @DisplayName("관심사 구독취소 요청이 성공하면 204를 반환한다")
+    @DisplayName("관심사 구독취소 요청이 성공하면 200을 반환한다")
     void unsubscribe_success() throws Exception {
         // given
         UUID interestId = UUID.randomUUID();
@@ -100,7 +150,9 @@ class InterestControllerTest {
         // when & then
         mockMvc.perform(delete("/api/interests/{interestId}/subscriptions", interestId)
                         .header("Monew-Request-User-ID", userId.toString()))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk());
+
+        verify(interestService).unsubscribe(userId, interestId);
     }
 
 }

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 
@@ -31,7 +32,7 @@ class InterestRepositoryImplTest {
         interestRepository.save(Interest.create("인공위성"));
 
         InterestSearchCondition condition = new InterestSearchCondition(
-                "인공", InterestSortType.NAME, null, 10
+                "인공", InterestSortType.NAME, Sort.Direction.ASC, null, null, 10
         );
 
         // when
@@ -40,6 +41,26 @@ class InterestRepositoryImplTest {
         // then
         assertThat(result).extracting(Interest::getName)
                 .containsExactlyInAnyOrder("인공지능", "인공위성");
+    }
+
+    @Test
+    @DisplayName("이름 오름차순으로 정렬된다")
+    void searchByCursor_sortsByNameAsc() {
+        // given
+        interestRepository.save(Interest.create("나"));
+        interestRepository.save(Interest.create("가"));
+        interestRepository.save(Interest.create("다"));
+
+        InterestSearchCondition condition = new InterestSearchCondition(
+                null, InterestSortType.NAME, Sort.Direction.ASC, null, null, 10
+        );
+
+        // when
+        List<Interest> result = interestRepository.searchByCursor(condition);
+
+        // then
+        assertThat(result).extracting(Interest::getName)
+                .containsExactly("가", "나", "다");
     }
 
     @Test
@@ -55,7 +76,7 @@ class InterestRepositoryImplTest {
         interestRepository.save(high);
 
         InterestSearchCondition condition = new InterestSearchCondition(
-                null, InterestSortType.SUBSCRIBER_COUNT, null, 10
+                null, InterestSortType.SUBSCRIBER_COUNT, Sort.Direction.DESC, null, null, 10
         );
 
         // when
@@ -64,6 +85,30 @@ class InterestRepositoryImplTest {
         // then
         assertThat(result).extracting(Interest::getName)
                 .containsExactly("높은인기", "낮은인기");
+    }
+
+    @Test
+    @DisplayName("구독자수 기준 오름차순으로 정렬된다")
+    void searchByCursor_sortsBySubscriberCountAsc() {
+        // given
+        Interest low = Interest.create("낮은인기");
+        Interest high = Interest.create("높은인기");
+        for (int i = 0; i < 5; i++) high.increaseSubscriberCount();
+        low.increaseSubscriberCount();
+
+        interestRepository.save(low);
+        interestRepository.save(high);
+
+        InterestSearchCondition condition = new InterestSearchCondition(
+                null, InterestSortType.SUBSCRIBER_COUNT, Sort.Direction.ASC, null, null, 10
+        );
+
+        // when
+        List<Interest> result = interestRepository.searchByCursor(condition);
+
+        // then
+        assertThat(result).extracting(Interest::getName)
+                .containsExactly("낮은인기", "높은인기");
     }
 
     @Test
@@ -83,7 +128,7 @@ class InterestRepositoryImplTest {
 
         String cursor = savedA.getSubscriberCount() + "_" + savedA.getId();
         InterestSearchCondition condition = new InterestSearchCondition(
-                null, InterestSortType.SUBSCRIBER_COUNT, cursor, 10
+                null, InterestSortType.SUBSCRIBER_COUNT, Sort.Direction.DESC, cursor, null, 10
         );
 
         // when
@@ -92,6 +137,27 @@ class InterestRepositoryImplTest {
         // then
         assertThat(result).extracting(Interest::getName)
                 .containsExactly("B", "C");
+    }
+
+    @Test
+    @DisplayName("이름 커서 이후의 관심사를 오름차순으로 조회한다")
+    void searchByCursor_afterNameCursor() {
+        // given
+        Interest a = interestRepository.save(Interest.create("가"));
+        interestRepository.save(Interest.create("나"));
+        interestRepository.save(Interest.create("다"));
+
+        String cursor = a.getName() + "_" + a.getId();
+        InterestSearchCondition condition = new InterestSearchCondition(
+                null, InterestSortType.NAME, Sort.Direction.ASC, cursor, null, 10
+        );
+
+        // when
+        List<Interest> result = interestRepository.searchByCursor(condition);
+
+        // then
+        assertThat(result).extracting(Interest::getName)
+                .containsExactly("나", "다");
     }
 
 }
