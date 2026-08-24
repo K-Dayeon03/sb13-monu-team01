@@ -38,8 +38,9 @@ public class UserController {
   @PatchMapping("/{userId}")
   public UserResponse update(
       @PathVariable UUID userId,
+      @RequestHeader("MoNew-Request-User-ID") UUID requestUserId,
       @Valid @RequestBody UserUpdateRequest request
   ) {
-    return userService.update(userId, request);
+    return userService.update(userId, requestUserId, request);
   }
 }

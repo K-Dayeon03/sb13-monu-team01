@@ -62,7 +62,15 @@ public class UserService {
     return UserResponse.from(user);
   }
 
-  public UserResponse update(UUID userId, UserUpdateRequest request) {
+  public UserResponse update(
+      UUID userId,
+      UUID requestUserId,
+      UserUpdateRequest request
+  ) {
+
+    if (!userId.equals(requestUserId)) {
+      throw new BusinessException(ErrorCode.USER_UPDATE_ACCESS_DENIED);
+    }
 
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));

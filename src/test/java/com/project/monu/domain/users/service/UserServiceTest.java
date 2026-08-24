@@ -201,7 +201,7 @@ class UserServiceTest {
     when(userRepository.save(user))
         .thenReturn(user);
 
-    UserResponse response = userService.update(userId, request);
+    UserResponse response = userService.update(userId, userId, request);
 
     assertThat(response.nickname()).isEqualTo("새닉네임");
 
@@ -219,7 +219,9 @@ class UserServiceTest {
     when(userRepository.findById(userId))
         .thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> userService.update(userId, request))
+    assertThatThrownBy(
+        () -> userService.update(userId, userId, request)
+    )
         .isInstanceOf(BusinessException.class)
         .hasMessage("사용자를 찾을 수 없습니다.");
   }
