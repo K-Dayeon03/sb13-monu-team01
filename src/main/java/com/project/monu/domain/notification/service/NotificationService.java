@@ -115,7 +115,6 @@ public class NotificationService {
     @Transactional
     public void createCommentLikeNotification(
             UUID commentAuthorId,
-            UUID likedByUserId,
             String likedByUserNickname,
             UUID commentId
     ) {
