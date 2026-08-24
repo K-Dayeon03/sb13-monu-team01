@@ -8,6 +8,7 @@ import com.project.monu.global.dto.CursorPageResponse;
 import com.project.monu.global.exception.BusinessException;
 import com.project.monu.global.exception.ErrorCode;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private static final int DEFAULT_PAGE_SIZE = 10;
     private static final int MAX_PAGE_SIZE = 100;
+    private static final int OLD_NOTIFICATION_RETENTION_DAYS = 7;
 
     public NotificationService(NotificationRepository notificationRepository) {
         this.notificationRepository = notificationRepository;
@@ -100,5 +102,12 @@ public class NotificationService {
         notifications.forEach(notification -> notification.confirm(confirmedAt));
 
         return new NotificationConfirmAllResponse(notifications.size());
+    }
+
+    @Transactional
+    public long deleteOldConfirmedNotifications(Instant now) {
+        Instant threshold = now.minus(OLD_NOTIFICATION_RETENTION_DAYS, ChronoUnit.DAYS);
+
+        return notificationRepository.deleteByConfirmedTrueAndUpdatedAtBefore(threshold);
     }
 }
