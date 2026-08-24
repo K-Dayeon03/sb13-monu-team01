@@ -224,5 +224,19 @@ class UserServiceTest {
         .hasMessage("사용자를 찾을 수 없습니다.");
   }
 
+  @Test
+  void 다른_사용자의_닉네임은_수정할_수_없다() {
+    UUID userId = UUID.randomUUID();
+    UUID requestUserId = UUID.randomUUID();
 
+    UserUpdateRequest request = new UserUpdateRequest(
+        "새닉네임"
+    );
+
+    assertThatThrownBy(
+        () -> userService.update(userId, requestUserId, request)
+    )
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("사용자 정보 수정 권한이 없습니다.");
+  }
 }
