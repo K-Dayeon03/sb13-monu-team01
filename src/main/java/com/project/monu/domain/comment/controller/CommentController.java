@@ -2,6 +2,7 @@ package com.project.monu.domain.comment.controller;
 
 import com.project.monu.domain.comment.dto.CommentDto;
 import com.project.monu.domain.comment.dto.request.CommentCreateRequest;
+import com.project.monu.domain.comment.dto.request.CommentUpdateRequest;
 import com.project.monu.domain.comment.service.CommentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +36,19 @@ public class CommentController {
             @RequestParam UUID articleId
     ) {
         List<CommentDto> comments = commentService.getComments(articleId);
+
         return ResponseEntity.ok(comments);
+    }
+
+    @PatchMapping("/{commentId}")
+    public ResponseEntity<CommentDto> update(
+            @PathVariable UUID commentId,
+            @RequestHeader("Monew-Request-User-ID") UUID requestUserId,
+            @Valid @RequestBody CommentUpdateRequest request
+    ) {
+        CommentDto comment = commentService.update(commentId, requestUserId, request);
+
+        return ResponseEntity.ok(comment);
     }
 
 }

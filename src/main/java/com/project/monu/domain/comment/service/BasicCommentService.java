@@ -11,6 +11,8 @@ import com.project.monu.domain.comment.repository.CommentLikeRepository;
 import com.project.monu.domain.comment.repository.CommentRepository;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
+import com.project.monu.global.exception.BusinessException;
+import com.project.monu.global.exception.ErrorCode;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
@@ -54,9 +56,28 @@ public class BasicCommentService implements CommentService {
                 savedComment.getCreatedAt());
     }
 
+    @Transactional
     @Override
     public CommentDto update(UUID commentId, UUID requestUserId, CommentUpdateRequest request) {
-        return null;
+        Comment comment = commentRepository.findActiveById(commentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+        if (!comment.getUser().getId().equals(requestUserId)) {
+            throw new BusinessException(ErrorCode.COMMENT_ACCESS_DENIED);
+        }
+
+        comment.updateContent(request.content());
+
+        return new CommentDto(
+                comment.getId(),
+                comment.getArticle().getId(),
+                comment.getUser().getId(),
+                comment.getUser().getNickname(),
+                comment.getContent(),
+                0L,
+                false,
+                comment.getCreatedAt()
+        );
     }
 
     @Override
