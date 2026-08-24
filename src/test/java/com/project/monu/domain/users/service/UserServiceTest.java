@@ -2,10 +2,12 @@ package com.project.monu.domain.users.service;
 
 import com.project.monu.domain.users.dto.request.UserCreateRequest;
 import com.project.monu.domain.users.dto.request.UserLoginRequest;
+import com.project.monu.domain.users.dto.request.UserUpdateRequest;
 import com.project.monu.domain.users.dto.response.UserResponse;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.exception.BusinessException;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -176,5 +178,28 @@ class UserServiceTest {
     assertThatThrownBy(() -> userService.login(request))
         .isInstanceOf(BusinessException.class)
         .hasMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
+  }
+
+  // nickname 수정
+  @Test
+  void 사용자의_닉네임을_수정할_수_있다() {
+    UUID userId = UUID.randomUUID();
+
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("기존닉네임")
+        .password("encoded-password")
+        .build();
+
+    UserUpdateRequest request = new UserUpdateRequest(
+        "새닉네임"
+    );
+
+    when(userRepository.findById(userId))
+        .thenReturn(Optional.of(user));
+
+    UserResponse response = userService.update(userId, request);
+
+    assertThat(response.nickname()).isEqualTo("새닉네임");
   }
 }
