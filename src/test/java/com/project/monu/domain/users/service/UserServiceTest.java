@@ -207,4 +207,22 @@ class UserServiceTest {
 
     verify(userRepository).save(user);
   }
+
+  @Test
+  void 존재하지_않는_사용자의_닉네임은_수정할_수_없다() {
+    UUID userId = UUID.randomUUID();
+
+    UserUpdateRequest request = new UserUpdateRequest(
+        "새닉네임"
+    );
+
+    when(userRepository.findById(userId))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> userService.update(userId, request))
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("사용자를 찾을 수 없습니다.");
+  }
+
+
 }
