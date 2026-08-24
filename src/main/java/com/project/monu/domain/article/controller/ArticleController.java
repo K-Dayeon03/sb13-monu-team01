@@ -67,7 +67,7 @@ public class ArticleController {
     @DeleteMapping("/{articleId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void softDelete(@PathVariable UUID articleId,
-                           // API 사용자 식별을 위해 필수 헤더를 받습니다.
+                           // API 요청 사용자 식별 규약에 따라 필수 헤더를 받습니다.
                            @RequestHeader("MoNew-Request-User-ID") UUID userId) {
         articleService.softDelete(articleId);
     }
