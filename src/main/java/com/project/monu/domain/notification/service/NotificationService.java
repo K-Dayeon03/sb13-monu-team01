@@ -128,4 +128,25 @@ public class NotificationService {
 
         notificationRepository.save(notification);
     }
+
+    @Transactional
+    public void createInterestArticleNotifications(
+            UUID interestId,
+            String interestName,
+            int articleCount,
+            List<UUID> subscriberUserIds
+    ) {
+        String content = interestName + "와 관련된 기사가 " + articleCount + "건 등록되었습니다.";
+
+        List<Notification> notifications = subscriberUserIds.stream()
+                .map(subscriberUserId -> Notification.create(
+                        subscriberUserId,
+                        content,
+                        NotificationResourceType.INTEREST,
+                        interestId
+                ))
+                .toList();
+
+        notificationRepository.saveAll(notifications);
+    }
 }
