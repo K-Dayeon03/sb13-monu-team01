@@ -1,7 +1,6 @@
 package com.project.monu.domain.batch.controller;
 
-import com.project.monu.domain.article.dto.ArticleRestoreResultDto;
-import com.project.monu.domain.article.service.ArticleBackupService;
+import com.project.monu.domain.batch.config.ArticleRestoreJobConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,11 +18,9 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,7 +36,7 @@ class BatchControllerTest {
     private Job articleBackupJob;
 
     @Mock
-    private ArticleBackupService articleBackupService;
+    private Job articleRestoreJob;
 
     @Test
     @DisplayName("POST /api/batch/backup 요청 시 기사 백업 Job을 실행한다")
@@ -61,27 +58,24 @@ class BatchControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/batch/restore 요청 시 지정 날짜 기사 복구를 실행한다")
+    @DisplayName("POST /api/batch/restore 요청 시 지정 날짜 기사 복구 Job을 실행한다")
     void 복구_수동_실행_요청을_처리한다() throws Exception {
         // given
-        // 복구는 날짜 파라미터가 필요하므로, Controller가 LocalDate로 바인딩해 서비스에 넘기는지 확인합니다.
+        // 복구는 날짜 파라미터가 필요하므로, Controller가 LocalDate로 바인딩해 JobParameters에 담는지 확인합니다.
         LocalDate restoreDate = LocalDate.of(2026, 8, 20);
-        given(articleBackupService.restore(restoreDate))
-                .willReturn(new ArticleRestoreResultDto(
-                        restoreDate,
-                        "article-backups/2026-08-20.jsonl",
-                        1
-                ));
 
         // when & then
         mockMvc().perform(post("/api/batch/restore")
                         .param("date", "2026-08-20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.restoreDate").value("2026-08-20"))
-                .andExpect(jsonPath("$.backupKey").value("article-backups/2026-08-20.jsonl"))
-                .andExpect(jsonPath("$.restoredArticleCount").value(1));
+                .andExpect(content().string("기사 복구 배치 실행 완료"));
 
-        verify(articleBackupService).restore(restoreDate);
+        ArgumentCaptor<JobParameters> paramsCaptor = ArgumentCaptor.forClass(JobParameters.class);
+        verify(jobOperator).start(eq(articleRestoreJob), paramsCaptor.capture());
+
+        assertThat(paramsCaptor.getValue().getString(ArticleRestoreJobConfig.RESTORE_DATE_PARAM))
+                .isEqualTo(restoreDate.toString());
+        assertThat(paramsCaptor.getValue().getLong("timestamp")).isNotNull();
     }
 
     private MockMvc mockMvc() {
@@ -90,7 +84,7 @@ class BatchControllerTest {
                         jobOperator,
                         articleCollectJob,
                         articleBackupJob,
-                        articleBackupService
+                        articleRestoreJob
                 ))
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();
