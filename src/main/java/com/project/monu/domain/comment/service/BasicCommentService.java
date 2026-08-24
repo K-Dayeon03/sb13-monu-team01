@@ -33,13 +33,11 @@ public class BasicCommentService implements CommentService {
     @Override
     public CommentDto create(CommentCreateRequest request) {
 
-
-        // 공통 예외 구조 맞출 때 ArticleNotFoundException, UserNotFoundException 등으로 바꿀 것
         Article article = articleRepository.findById(request.articleId())
-                .orElseThrow(() -> new IllegalArgumentException("기사를 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND));
 
         User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Comment comment = new Comment(article, user, request.content());
 
@@ -80,8 +78,18 @@ public class BasicCommentService implements CommentService {
         );
     }
 
+    @Transactional
     @Override
     public void delete(UUID commentId, UUID requestUserId) {
+
+        Comment comment = commentRepository.findActiveById(commentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+        if (!comment.getUser().getId().equals(requestUserId)) {
+            throw new BusinessException(ErrorCode.COMMENT_ACCESS_DENIED);
+        }
+
+        comment.delete();
     }
 
     @Override

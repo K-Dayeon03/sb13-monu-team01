@@ -43,4 +43,8 @@ public class Comment extends BaseEntity {
     public void updateContent(String content) {
         this.content = content;
     }
+
+    public void delete() {
+        this.deletedAt = Instant.now();
+    }
 }
