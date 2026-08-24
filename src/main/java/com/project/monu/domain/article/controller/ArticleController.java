@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -71,4 +72,10 @@ public class ArticleController {
                            @RequestHeader("MoNew-Request-User-ID") UUID userId) {
         articleService.softDelete(articleId);
     }
+
+    @GetMapping("/sources")
+    public List<String> getSources() {
+        return articleService.getSources();
+    }
+
 }
