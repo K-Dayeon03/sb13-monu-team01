@@ -100,6 +100,26 @@ public enum ErrorCode {
           HttpStatus.NOT_FOUND,
           "SUBSCRIPTION_NOT_FOUND",
           "구독 내역을 찾을 수 없습니다."
+  ),
+
+  /*
+   * 댓글 관리 - 댓글 조회/수정/삭제
+   * 존재하지 않거나 이미 삭제된 댓글을 조회하려는 경우 사용
+   */
+  COMMENT_NOT_FOUND(
+          HttpStatus.NOT_FOUND,
+        "COMMENT_NOT_FOUND",
+        "댓글을 찾을 수 없습니다."
+  ),
+
+  /*
+   * 댓글 관리 - 댓글 수정/삭제
+   * 댓글 작성자가 아닌 사용자가 수정 또는 삭제를 시도한 경우 사용
+   */
+  COMMENT_ACCESS_DENIED(
+          HttpStatus.FORBIDDEN,
+        "COMMENT_ACCESS_DENIED",
+        "댓글을 수정하거나 삭제할 권한이 없습니다."
   );
 
   private final HttpStatus status;

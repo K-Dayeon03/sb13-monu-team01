@@ -11,10 +11,13 @@ import com.project.monu.domain.comment.repository.CommentLikeRepository;
 import com.project.monu.domain.comment.repository.CommentRepository;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
+import com.project.monu.global.exception.BusinessException;
+import com.project.monu.global.exception.ErrorCode;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -30,13 +33,11 @@ public class BasicCommentService implements CommentService {
     @Override
     public CommentDto create(CommentCreateRequest request) {
 
-
-        // 공통 예외 구조 맞출 때 ArticleNotFoundException, UserNotFoundException 등으로 바꿀 것
         Article article = articleRepository.findById(request.articleId())
-                .orElseThrow(() -> new IllegalArgumentException("기사를 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND));
 
         User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Comment comment = new Comment(article, user, request.content());
 
@@ -53,13 +54,42 @@ public class BasicCommentService implements CommentService {
                 savedComment.getCreatedAt());
     }
 
+    @Transactional
     @Override
     public CommentDto update(UUID commentId, UUID requestUserId, CommentUpdateRequest request) {
-        return null;
+        Comment comment = commentRepository.findActiveById(commentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+        if (!comment.getUser().getId().equals(requestUserId)) {
+            throw new BusinessException(ErrorCode.COMMENT_ACCESS_DENIED);
+        }
+
+        comment.updateContent(request.content());
+
+        return new CommentDto(
+                comment.getId(),
+                comment.getArticle().getId(),
+                comment.getUser().getId(),
+                comment.getUser().getNickname(),
+                comment.getContent(),
+                0L,
+                false,
+                comment.getCreatedAt()
+        );
     }
 
+    @Transactional
     @Override
     public void delete(UUID commentId, UUID requestUserId) {
+
+        Comment comment = commentRepository.findActiveById(commentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+        if (!comment.getUser().getId().equals(requestUserId)) {
+            throw new BusinessException(ErrorCode.COMMENT_ACCESS_DENIED);
+        }
+
+        comment.delete();
     }
 
     @Override
@@ -73,5 +103,25 @@ public class BasicCommentService implements CommentService {
 
     @Override
     public void unlike(UUID commentId, UUID requestUserId) {
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CommentDto> getComments(UUID articleId) {
+
+        List<Comment> comments = commentRepository.findAllActiveByArticleId(articleId);
+
+        return comments.stream()
+                .map(comment -> new CommentDto(
+                        comment.getId(),
+                        comment.getArticle().getId(),
+                        comment.getUser().getId(),
+                        comment.getUser().getNickname(),
+                        comment.getContent(),
+                        0L,
+                        false,
+                        comment.getCreatedAt()
+                ))
+                .toList();
     }
 }

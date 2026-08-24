@@ -5,6 +5,7 @@ import com.project.monu.domain.comment.dto.CommentLikeDto;
 import com.project.monu.domain.comment.dto.request.CommentCreateRequest;
 import com.project.monu.domain.comment.dto.request.CommentUpdateRequest;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface CommentService {
@@ -20,4 +21,6 @@ public interface CommentService {
     CommentLikeDto like(UUID commentId, UUID requestUserId);
 
     void unlike(UUID commentId, UUID requestUserId);
+
+    List<CommentDto> getComments(UUID articleId);
 }
