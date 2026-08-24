@@ -3,6 +3,7 @@ package com.project.monu.domain.interest.service;
 import com.project.monu.domain.interest.dto.request.InterestRegisterRequest;
 import com.project.monu.domain.interest.dto.request.InterestSearchCondition;
 import com.project.monu.domain.interest.dto.request.InterestSortType;
+import com.project.monu.domain.interest.dto.request.InterestUpdateRequest;
 import com.project.monu.domain.interest.dto.response.InterestDto;
 import com.project.monu.domain.interest.dto.response.SubscriptionDto;
 import com.project.monu.domain.interest.entity.Interest;
@@ -17,7 +18,9 @@ import com.project.monu.global.exception.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -51,13 +54,34 @@ public class InterestService {
         return toDto(saved, false);
     }
 
+    @Transactional
+    public InterestDto update(UUID interestId, InterestUpdateRequest request) {
+        Interest interest = interestRepository.findById(interestId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND));
+
+        interest.updateKeywords(request.keywords());
+
+        return toDto(interest, false);
+    }
+
+    @Transactional
+    public void delete(UUID interestId) {
+        Interest interest = interestRepository.findById(interestId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND));
+
+        subscriptionRepository.deleteAllByInterest_Id(interestId);
+        interestRepository.delete(interest);
+    }
+
     @Transactional(readOnly = true)
-    public CursorPageResponse<InterestDto> getInterests(InterestSearchCondition condition) {
+    public CursorPageResponse<InterestDto> getInterests(InterestSearchCondition condition, UUID userId) {
         int size = normalizeSize(condition.size());
         InterestSearchCondition normalizedCondition = new InterestSearchCondition(
                 condition.keyword(),
                 condition.sortType(),
+                condition.direction(),
                 condition.nextCursor(),
+                condition.nextAfter(),
                 size
         );
 
@@ -68,8 +92,10 @@ public class InterestService {
             interests = interests.subList(0, size);
         }
 
+        Set<UUID> subscribedInterestIds = subscribedInterestIds(userId, interests);
+
         List<InterestDto> content = interests.stream()
-                .map(interest -> toDto(interest, false))
+                .map(interest -> toDto(interest, subscribedInterestIds.contains(interest.getId())))
                 .toList();
 
         Interest lastInterest = interests.isEmpty() ? null : interests.get(interests.size() - 1);
@@ -77,11 +103,20 @@ public class InterestService {
         return new CursorPageResponse<>(
                 content,
                 hasNext ? createNextCursor(lastInterest, normalizedCondition.sortType()) : null,
-                null,
+                hasNext ? lastInterest.getCreatedAt() : null,
                 size,
                 interestRepository.countByCondition(normalizedCondition),
                 hasNext
         );
+    }
+
+    private Set<UUID> subscribedInterestIds(UUID userId, List<Interest> interests) {
+        if (userId == null || interests.isEmpty()) {
+            return new HashSet<>();
+        }
+
+        List<UUID> interestIds = interests.stream().map(Interest::getId).toList();
+        return new HashSet<>(subscriptionRepository.findSubscribedInterestIds(userId, interestIds));
     }
 
     @Transactional

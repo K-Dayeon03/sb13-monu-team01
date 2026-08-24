@@ -78,6 +78,71 @@ class InterestServiceTest {
     }
 
     @Test
+    @DisplayName("관심사의 키워드를 수정하면 변경된 InterestDto를 반환한다")
+    void update_success() {
+        // given
+        Interest interest = Interest.create("인공지능");
+        interest.addKeyword(Keyword.of("AI"));
+        ReflectionTestUtils.setField(interest, "id", UUID.randomUUID());
+
+        when(interestRepository.findById(interest.getId())).thenReturn(Optional.of(interest));
+
+        com.project.monu.domain.interest.dto.request.InterestUpdateRequest request =
+                new com.project.monu.domain.interest.dto.request.InterestUpdateRequest(List.of("머신러닝", "딥러닝"));
+
+        // when
+        InterestDto result = interestService.update(interest.getId(), request);
+
+        // then
+        assertThat(result.keywords()).containsExactlyInAnyOrder("머신러닝", "딥러닝");
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 관심사를 수정하면 예외가 발생한다")
+    void update_throwsException_whenInterestNotFound() {
+        // given
+        UUID interestId = UUID.randomUUID();
+        when(interestRepository.findById(interestId)).thenReturn(Optional.empty());
+
+        com.project.monu.domain.interest.dto.request.InterestUpdateRequest request =
+                new com.project.monu.domain.interest.dto.request.InterestUpdateRequest(List.of("AI"));
+
+        // when & then
+        assertThatThrownBy(() -> interestService.update(interestId, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("관심사를 찾을 수 없습니다.");
+    }
+
+    @Test
+    @DisplayName("존재하는 관심사를 삭제하면 관심사와 구독 내역이 함께 삭제된다")
+    void delete_success() {
+        // given
+        Interest interest = Interest.create("인공지능");
+        ReflectionTestUtils.setField(interest, "id", UUID.randomUUID());
+        when(interestRepository.findById(interest.getId())).thenReturn(Optional.of(interest));
+
+        // when
+        interestService.delete(interest.getId());
+
+        // then
+        verify(subscriptionRepository).deleteAllByInterest_Id(interest.getId());
+        verify(interestRepository).delete(interest);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 관심사를 삭제하면 예외가 발생한다")
+    void delete_throwsException_whenInterestNotFound() {
+        // given
+        UUID interestId = UUID.randomUUID();
+        when(interestRepository.findById(interestId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> interestService.delete(interestId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("관심사를 찾을 수 없습니다.");
+    }
+
+    @Test
     @DisplayName("존재하는 관심사를 구독하면 SubscriptionDto를 반환한다")
     void subscribe_success() {
         // given
@@ -134,16 +199,19 @@ class InterestServiceTest {
     @DisplayName("조건에 맞는 관심사 목록을 커서 페이지 응답으로 반환한다")
     void getInterests_returnsPagedResponse() {
         // given
-        InterestSearchCondition condition = new InterestSearchCondition(null, InterestSortType.SUBSCRIBER_COUNT, null, 10);
+        InterestSearchCondition condition = new InterestSearchCondition(
+                null, InterestSortType.SUBSCRIBER_COUNT, null, null, null, 10
+        );
 
         Interest interest = Interest.create("인공지능");
         interest.addKeyword(Keyword.of("AI"));
+        ReflectionTestUtils.setField(interest, "id", UUID.randomUUID());
 
         when(interestRepository.searchByCursor(any())).thenReturn(List.of(interest));
         when(interestRepository.countByCondition(any())).thenReturn(1L);
 
         // when
-        CursorPageResponse<InterestDto> response = interestService.getInterests(condition);
+        CursorPageResponse<InterestDto> response = interestService.getInterests(condition, null);
 
         // then
         assertThat(response.content()).hasSize(1);
@@ -156,7 +224,9 @@ class InterestServiceTest {
     @DisplayName("조회 결과가 size보다 많으면 hasNext가 true이고 초과분은 잘린다")
     void getInterests_setsHasNextTrue_whenMoreThanSizeResults() {
         // given
-        InterestSearchCondition condition = new InterestSearchCondition(null, InterestSortType.SUBSCRIBER_COUNT, null, 1);
+        InterestSearchCondition condition = new InterestSearchCondition(
+                null, InterestSortType.SUBSCRIBER_COUNT, null, null, null, 1
+        );
 
         Interest first = Interest.create("인공지능");
         Interest second = Interest.create("스포츠");
@@ -167,7 +237,7 @@ class InterestServiceTest {
         when(interestRepository.countByCondition(any())).thenReturn(2L);
 
         // when
-        CursorPageResponse<InterestDto> response = interestService.getInterests(condition);
+        CursorPageResponse<InterestDto> response = interestService.getInterests(condition, null);
 
         // then
         assertThat(response.content()).hasSize(1);

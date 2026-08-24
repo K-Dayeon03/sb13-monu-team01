@@ -1,8 +1,11 @@
 package com.project.monu.domain.interest.exception;
 
-public class InvalidInterestCursorException extends RuntimeException {
+import com.project.monu.global.exception.BusinessException;
+import com.project.monu.global.exception.ErrorCode;
 
-    public InvalidInterestCursorException(String message) {
-        super(message);
+public class InvalidInterestCursorException extends BusinessException {
+
+    public InvalidInterestCursorException() {
+        super(ErrorCode.INVALID_INTEREST_CURSOR);
     }
 }

@@ -80,6 +80,16 @@ public enum ErrorCode {
           "관심사를 찾을 수 없습니다."
   ),
 
+  /*
+   * 관심사 관리 - 목록 조회
+   * nextCursor 파라미터가 "정렬값_id" 형식이 아니거나 파싱할 수 없는 경우 사용합니다.
+   */
+  INVALID_INTEREST_CURSOR(
+          HttpStatus.BAD_REQUEST,
+          "INVALID_INTEREST_CURSOR",
+          "잘못된 커서 형식입니다."
+  ),
+
   SUBSCRIPTION_ALREADY_EXISTS(
           HttpStatus.CONFLICT,
           "SUBSCRIPTION_DUPLICATION",
