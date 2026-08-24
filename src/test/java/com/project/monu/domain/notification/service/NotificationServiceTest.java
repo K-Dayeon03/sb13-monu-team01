@@ -117,25 +117,6 @@ class NotificationServiceTest {
         assertThat(response.hasNext()).isFalse();
     }
 
-//    @Test
-//    void 미확인_알림이_limit보다_많으면_hasNext가_true다() {
-//        UUID userId = UUID.randomUUID();
-//        Notification firstNotification = createNotification(userId);
-//        Notification secondNotification = createNotification(userId);
-//        Notification extraNotification = createNotification(userId);
-//
-//        when(notificationRepository.findByUserIdAndConfirmedFalseOrderByCreatedAtDesc(userId))
-//                .thenReturn(List.of(firstNotification, secondNotification, extraNotification));
-//
-//        CursorPageResponse<NotificationResponse> response =
-//                notificationService.getNotifications(userId, 2);
-//
-//        assertThat(response.content()).hasSize(2);
-//        assertThat(response.size()).isEqualTo(2);
-//        assertThat(response.totalElements()).isEqualTo(3);
-//        assertThat(response.hasNext()).isTrue();
-//    }
-
     @Test
     void limit이_0보다_작거나_같으면_기본값_10으로_조회한다() {
         UUID userId = UUID.randomUUID();
