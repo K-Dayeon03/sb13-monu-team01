@@ -166,10 +166,12 @@ class NotificationServiceTest {
     @Test
     void 댓글_좋아요_알림을_생성한다() {
         UUID commentAuthorId = UUID.randomUUID();
+        UUID likedByUserId = UUID.randomUUID();
         UUID commentId = UUID.randomUUID();
 
         notificationService.createCommentLikeNotification(
                 commentAuthorId,
+                likedByUserId,
                 "김모뉴",
                 commentId
         );
@@ -221,5 +223,20 @@ class NotificationServiceTest {
         assertThat(savedNotifications)
                 .extracting(Notification::getResourceId)
                 .containsOnly(interestId);
+    }
+
+    @Test
+    void 자신의_댓글을_좋아요하면_알림을_생성하지_않는다() {
+        UUID userId = UUID.randomUUID();
+        UUID commentId = UUID.randomUUID();
+
+        notificationService.createCommentLikeNotification(
+                userId,
+                userId,
+                "김모뉴",
+                commentId
+        );
+
+        verify(notificationRepository, never()).save(any());
     }
 }
