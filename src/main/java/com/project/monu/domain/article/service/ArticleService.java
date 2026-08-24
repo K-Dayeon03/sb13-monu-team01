@@ -129,4 +129,14 @@ public class ArticleService {
 
         return Math.min(requestedSize, MAX_PAGE_SIZE);
     }
+
+    @Transactional
+    public void softDelete(UUID articleId) {
+        Article article = articleRepository
+                .findByIdAndDeletedAtIsNull(articleId)
+                .orElseThrow(()->
+                        new BusinessException(ErrorCode.ARTICLE_NOT_FOUND));
+
+        article.softDelete();
+    }
 }

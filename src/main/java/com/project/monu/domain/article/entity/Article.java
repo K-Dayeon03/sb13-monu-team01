@@ -79,4 +79,13 @@ public class Article {
         this.viewCount = 0L;
     }
 
+    //논리 삭제: 삭제 시각 기록
+    public void softDelete() {
+        this.deletedAt = Instant.now();
+    }
+    // 삭제 여부 확인
+    public boolean isDeleted() {
+        return this.deletedAt != null;
+    }
+
 }

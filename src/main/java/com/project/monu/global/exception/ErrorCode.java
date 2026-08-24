@@ -43,6 +43,16 @@ public enum ErrorCode {
   ),
 
   /*
+   * 뉴스 기사 관리 - 기사 조회 및 삭제
+   * 존재하지 않거나 이미 논리 삭제된 기사를 요청한 경우 사용합니다.
+   */
+  ARTICLE_NOT_FOUND(
+          HttpStatus.NOT_FOUND,
+          "ARTICLE_NOT_FOUND",
+          "기사를 찾을 수 없습니다."
+  ),
+
+  /*
    * 관심사 관리 - 관심사 등록
    * 기존 관심사와 80% 이상 유사한 이름으로 등록을 시도한 경우 사용합니다.
    */
