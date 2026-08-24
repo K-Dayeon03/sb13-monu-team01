@@ -187,9 +187,11 @@ class ArticleControllerTest {
                 .build();
 
         UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
 
         // when & then
-        mockMvc.perform(delete("/api/articles/{articleId}", articleId))
+        mockMvc.perform(delete("/api/articles/{articleId}", articleId)
+                        .header("MoNew-Request-User-ID", userId))
                 .andExpect(status().isNoContent());
 
         verify(articleService).softDelete(articleId);
@@ -205,18 +207,35 @@ class ArticleControllerTest {
                 .build();
 
         UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
 
         doThrow(new BusinessException(ErrorCode.ARTICLE_NOT_FOUND))
                 .when(articleService)
                 .softDelete(articleId);
 
         // when & then
-        mockMvc.perform(delete("/api/articles/{articleId}", articleId))
+        mockMvc.perform(delete("/api/articles/{articleId}", articleId)
+                        .header("MoNew-Request-User-ID", userId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("ARTICLE_NOT_FOUND"))
                 .andExpect(jsonPath("$.message").value("기사를 찾을 수 없습니다."))
                 .andExpect(jsonPath("$.status").value(404));
 
         verify(articleService).softDelete(articleId);
+    }
+
+    @Test
+    void 헤더없이_삭제하면_400() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders
+                .standaloneSetup(articleController)
+                .build();
+
+        UUID articleId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/api/articles/{articleId}", articleId))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(articleService);
     }
 }
