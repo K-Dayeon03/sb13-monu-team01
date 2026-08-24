@@ -1,7 +1,6 @@
 package com.project.monu.domain.batch.controller;
 
-import com.project.monu.domain.article.dto.ArticleRestoreResultDto;
-import com.project.monu.domain.article.service.ArticleBackupService;
+import com.project.monu.domain.batch.config.ArticleRestoreJobConfig;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
@@ -33,19 +32,19 @@ public class BatchController {
     private final JobOperator jobOperator;
     private final Job articleCollectJob;
     private final Job articleBackupJob;
-    private final ArticleBackupService articleBackupService;
+    private final Job articleRestoreJob;
 
     public BatchController(
             JobOperator jobOperator,
             @Qualifier("articleCollectJob") Job articleCollectJob,
             @Qualifier("articleBackupJob") Job articleBackupJob,
-            ArticleBackupService articleBackupService
+            @Qualifier("articleRestoreJob") Job articleRestoreJob
     ) {
-        // Job Bean이 여러 개라서 @Qualifier로 수집 Job과 백업 Job을 명확히 구분합니다.
+        // Job Bean이 여러 개라서 @Qualifier로 수집/백업/복구 Job을 명확히 구분합니다.
         this.jobOperator = jobOperator;
         this.articleCollectJob = articleCollectJob;
         this.articleBackupJob = articleBackupJob;
-        this.articleBackupService = articleBackupService;
+        this.articleRestoreJob = articleRestoreJob;
     }
 
 
@@ -71,14 +70,19 @@ public class BatchController {
         return "기사 백업 배치 실행 완료";
     }
 
-    @PostMapping("/restore")
-    public ArticleRestoreResultDto restoreArticles(
+    @PostMapping(value = "/restore", produces = "text/plain;charset=UTF-8")
+    public String runRestoreJob(
             @RequestParam
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate date
-    ) {
-        // 복구는 특정 날짜가 필요하므로 JobParameters 대신 서비스로 직접 연결합니다.
-        // 나중에 복구도 완전한 Spring Batch Job으로 분리하면 이 메서드가 해당 Job 실행 API가 됩니다.
-        return articleBackupService.restore(date);
+    ) throws Exception {
+        // 복구 날짜를 JobParameters로 넘겨 Spring Batch 실행 이력에 남깁니다.
+        JobParameters params = new JobParametersBuilder()
+                .addString(ArticleRestoreJobConfig.RESTORE_DATE_PARAM, date.toString())
+                .addLong("timestamp", System.currentTimeMillis())
+                .toJobParameters();
+
+        jobOperator.start(articleRestoreJob, params);
+        return "기사 복구 배치 실행 완료";
     }
 }
