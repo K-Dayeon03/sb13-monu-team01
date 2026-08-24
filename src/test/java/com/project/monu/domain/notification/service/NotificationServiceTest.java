@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class NotificationServiceTest {
 
@@ -179,5 +180,32 @@ class NotificationServiceTest {
 
         assertThat(deletedCount).isEqualTo(5L);
         verify(notificationRepository).deleteByConfirmedTrueAndUpdatedAtBefore(expectedThreshold);
+    }
+
+    @Test
+    void 댓글_좋아요_알림을_생성한다() {
+        UUID commentAuthorId = UUID.randomUUID();
+        UUID likedByUserId = UUID.randomUUID();
+        UUID commentId = UUID.randomUUID();
+
+        notificationService.createCommentLikeNotification(
+                commentAuthorId,
+                likedByUserId,
+                "김모뉴",
+                commentId
+        );
+
+        ArgumentCaptor<Notification> notificationCaptor =
+                ArgumentCaptor.forClass(Notification.class);
+
+        verify(notificationRepository).save(notificationCaptor.capture());
+
+        Notification savedNotification = notificationCaptor.getValue();
+
+        assertThat(savedNotification.getUserId()).isEqualTo(commentAuthorId);
+        assertThat(savedNotification.getContent()).isEqualTo("김모뉴님이 나의 댓글을 좋아합니다.");
+        assertThat(savedNotification.getResourceType()).isEqualTo(NotificationResourceType.COMMENT);
+        assertThat(savedNotification.getResourceId()).isEqualTo(commentId);
+        assertThat(savedNotification.isConfirmed()).isFalse();
     }
 }
