@@ -7,11 +7,8 @@ import com.project.monu.domain.article.service.ArticleService;
 import com.project.monu.global.dto.CursorPageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -65,5 +62,13 @@ public class ArticleController {
         );
 
         return articleService.getArticles(condition, userId);
+    }
+
+    @DeleteMapping("/{articleId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void softDelete(@PathVariable UUID articleId,
+                           // API 요청 사용자 식별 규약에 따라 필수 헤더를 받습니다.
+                           @RequestHeader("MoNew-Request-User-ID") UUID userId) {
+        articleService.softDelete(articleId);
     }
 }

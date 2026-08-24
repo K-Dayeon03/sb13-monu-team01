@@ -10,6 +10,7 @@ import com.project.monu.domain.article.repository.ArticleViewRepository;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.dto.CursorPageResponse;
 import com.project.monu.global.exception.BusinessException;
+import com.project.monu.global.exception.ErrorCode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -19,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -195,6 +197,43 @@ class ArticleServiceTest {
         verify(articleRepository).searchByCursor(conditionCaptor.capture());
         assertThat(conditionCaptor.getValue().size()).isEqualTo(100);
         assertThat(response.size()).isEqualTo(100);
+    }
+
+    @Test
+    void 존재하는_기사를_논리_삭제한다() {
+        // given
+        UUID articleId = UUID.randomUUID();
+        Article article = mock(Article.class);
+
+        when(articleRepository.findByIdAndDeletedAtIsNull(articleId))
+                .thenReturn(Optional.of(article));
+
+        // when
+        articleService.softDelete(articleId);
+
+        // then
+        verify(articleRepository).findByIdAndDeletedAtIsNull(articleId);
+        verify(article).softDelete();
+    }
+
+    @Test
+    void 존재하지_않는_기사를_논리_삭제하면_예외가_발생한다() {
+        // given
+        UUID articleId = UUID.randomUUID();
+
+        when(articleRepository.findByIdAndDeletedAtIsNull(articleId))
+                .thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> articleService.softDelete(articleId))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> {
+                    BusinessException businessException =
+                            (BusinessException) exception;
+
+                    assertThat(businessException.getErrorCode())
+                            .isEqualTo(ErrorCode.ARTICLE_NOT_FOUND);
+                });
     }
 
     private ArticleSearchCondition condition(int size, ArticleSortType sortType) {
