@@ -198,8 +198,13 @@ class UserServiceTest {
     when(userRepository.findById(userId))
         .thenReturn(Optional.of(user));
 
+    when(userRepository.save(user))
+        .thenReturn(user);
+
     UserResponse response = userService.update(userId, request);
 
     assertThat(response.nickname()).isEqualTo("새닉네임");
+
+    verify(userRepository).save(user);
   }
 }

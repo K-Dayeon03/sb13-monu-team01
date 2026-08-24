@@ -69,6 +69,8 @@ public class UserService {
 
     user.updateNickname(request.nickname());
 
-    return UserResponse.from(user);
+    User updatedUser = userRepository.save(user);
+
+    return UserResponse.from(updatedUser);
   }
 }
