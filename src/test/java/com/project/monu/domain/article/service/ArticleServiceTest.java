@@ -19,6 +19,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
 import java.util.List;
@@ -268,6 +269,119 @@ class ArticleServiceTest {
 
         verify(articleSourceRepository).findAllByEnabledTrue();
     }
+
+    @Test
+    void 기사_ID로_단건_조회하면_ArticleDto를_반환한다() {
+        // given
+        UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        ArticleSource source = ArticleSource.builder()
+                .name("NAVER")
+                .type(SourceType.API)
+                .sourceUrl("https://naver.example.com")
+                .build();
+
+        Article article = Article.builder()
+                .source(source)
+                .sourceUrl("https://example.com/article/1")
+                .title("테스트 기사")
+                .publishDate(Instant.parse("2026-08-24T00:00:00Z"))
+                .summary("테스트 요약")
+                .build();
+
+        ReflectionTestUtils.setField(article, "id", articleId);
+
+        when(userRepository.existsByIdAndDeletedAtIsNull(userId))
+                .thenReturn(true);
+
+        when(articleRepository.findByIdAndDeletedAtIsNull(articleId))
+                .thenReturn(Optional.of(article));
+
+        when(articleViewRepository.findViewedArticleIds(
+                userId,
+                List.of(articleId)
+        )).thenReturn(Set.of(articleId));
+
+        // when
+        ArticleDto result = articleService.getArticle(articleId, userId);
+
+        // then
+        assertThat(result.id()).isEqualTo(articleId);
+        assertThat(result.source()).isEqualTo("NAVER");
+        assertThat(result.sourceUrl())
+                .isEqualTo("https://example.com/article/1");
+        assertThat(result.title()).isEqualTo("테스트 기사");
+        assertThat(result.summary()).isEqualTo("테스트 요약");
+        assertThat(result.viewedByMe()).isTrue();
+
+        verify(userRepository)
+                .existsByIdAndDeletedAtIsNull(userId);
+        verify(articleRepository)
+                .findByIdAndDeletedAtIsNull(articleId);
+        verify(articleViewRepository)
+                .findViewedArticleIds(userId, List.of(articleId));
+    }
+
+    @Test
+    void 존재하지_않는_기사를_단건_조회하면_예외가_발생한다() {
+        // given
+        UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        when(userRepository.existsByIdAndDeletedAtIsNull(userId))
+                .thenReturn(true);
+
+        when(articleRepository.findByIdAndDeletedAtIsNull(articleId))
+                .thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() ->
+                articleService.getArticle(articleId, userId))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> {
+                    BusinessException businessException =
+                            (BusinessException) exception;
+
+                    assertThat(businessException.getErrorCode())
+                            .isEqualTo(ErrorCode.ARTICLE_NOT_FOUND);
+                });
+
+        verify(articleRepository)
+                .findByIdAndDeletedAtIsNull(articleId);
+
+        verifyNoInteractions(articleViewRepository);
+    }
+
+    @Test
+    void 존재하지_않는_사용자가_기사를_단건_조회하면_예외가_발생한다() {
+        // given
+        UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        when(userRepository.existsByIdAndDeletedAtIsNull(userId))
+                .thenReturn(false);
+
+        // when & then
+        assertThatThrownBy(() ->
+                articleService.getArticle(articleId, userId))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> {
+                    BusinessException businessException =
+                            (BusinessException) exception;
+
+                    assertThat(businessException.getErrorCode())
+                            .isEqualTo(ErrorCode.USER_NOT_FOUND);
+                });
+
+        verify(userRepository)
+                .existsByIdAndDeletedAtIsNull(userId);
+
+        verifyNoInteractions(articleRepository);
+        verifyNoInteractions(articleViewRepository);
+    }
+
+
 
     private ArticleSearchCondition condition(int size, ArticleSortType sortType) {
         return new ArticleSearchCondition(

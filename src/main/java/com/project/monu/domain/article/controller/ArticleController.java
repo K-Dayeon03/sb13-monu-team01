@@ -78,4 +78,10 @@ public class ArticleController {
         return articleService.getSources();
     }
 
+    @GetMapping("/{articleId}")
+    public ArticleDto getArticle(@PathVariable UUID articleId,
+                                 @RequestHeader("Monew-Request-User-ID") UUID userId) {
+        return articleService.getArticle(articleId, userId);
+    }
+
 }
