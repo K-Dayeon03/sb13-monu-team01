@@ -4,6 +4,7 @@ import com.project.monu.domain.article.dto.response.ArticleDto;
 import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
 import com.project.monu.domain.article.dto.request.ArticleSortType;
 import com.project.monu.domain.article.dto.response.ArticleRestoreResultDto;
+import com.project.monu.domain.article.dto.response.ArticleViewDto;
 import com.project.monu.domain.article.service.ArticleBackupService;
 import com.project.monu.domain.article.service.ArticleService;
 import com.project.monu.global.dto.CursorPageResponse;
@@ -30,6 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 @SpringBootTest(classes = ArticleController.class)
 class ArticleControllerTest {
@@ -431,6 +433,75 @@ class ArticleControllerTest {
 
         // when & then
         mockMvc.perform(get("/api/articles/{articleId}", articleId))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(articleService);
+    }
+
+    @Test
+    void 기사_조회수를_등록하면_200을_응답한다() throws Exception {
+        // given
+        UUID articleViewId = UUID.randomUUID();
+        UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        Instant createdAt = Instant.parse("2026-08-25T00:00:00Z");
+
+        ArticleViewDto response = new ArticleViewDto(
+                articleViewId,
+                userId,
+                createdAt,
+                articleId,
+                "NAVER",
+                "https://example.com/article/1",
+                "테스트 기사",
+                Instant.parse("2026-08-24T00:00:00Z"),
+                "테스트 요약",
+                3L,
+                11L
+        );
+
+        when(articleService.registerView(articleId, userId))
+                .thenReturn(response);
+
+        MockMvc mockMvc = MockMvcBuilders
+                .standaloneSetup(articleController)
+                .build();
+
+        // when & then
+        mockMvc.perform(post(
+                        "/api/articles/{articleId}/article-views",
+                        articleId
+                ).header("MoNew-Request-User-ID", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id")
+                        .value(articleViewId.toString()))
+                .andExpect(jsonPath("$.viewedBy")
+                        .value(userId.toString()))
+                .andExpect(jsonPath("$.articleId")
+                        .value(articleId.toString()))
+                .andExpect(jsonPath("$.source").value("NAVER"))
+                .andExpect(jsonPath("$.articleTitle")
+                        .value("테스트 기사"))
+                .andExpect(jsonPath("$.articleViewCount").value(11));
+
+        verify(articleService).registerView(articleId, userId);
+    }
+
+    @Test
+    void 사용자_ID_헤더없이_조회수를_등록하면_400을_응답한다()
+            throws Exception {
+        // given
+        UUID articleId = UUID.randomUUID();
+
+        MockMvc mockMvc = MockMvcBuilders
+                .standaloneSetup(articleController)
+                .build();
+
+        // when & then
+        mockMvc.perform(post(
+                        "/api/articles/{articleId}/article-views",
+                        articleId
+                ))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(articleService);
