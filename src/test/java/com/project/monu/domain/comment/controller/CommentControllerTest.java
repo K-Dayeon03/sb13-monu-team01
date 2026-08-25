@@ -2,7 +2,10 @@ package com.project.monu.domain.comment.controller;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -10,6 +13,7 @@ import com.project.monu.domain.comment.dto.CommentDto;
 import com.project.monu.domain.comment.dto.request.CommentCreateRequest;
 import com.project.monu.domain.comment.dto.request.CommentUpdateRequest;
 import com.project.monu.domain.comment.service.CommentService;
+import com.project.monu.global.dto.CursorPageResponse;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -19,12 +23,18 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(CommentController.class)
 class CommentControllerTest {
 
+    private static final String REQUEST_USER_ID_HEADER = "Monew-Request-User-ID";
+
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private JsonMapper jsonMapper;
 
     @MockitoBean
     private CommentService commentService;
@@ -55,13 +65,7 @@ class CommentControllerTest {
         // when & then
         mockMvc.perform(post("/api/comments")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "articleId": "%s",
-                                  "userId": "%s",
-                                  "content": "댓글 등록 테스트입니다."
-                                }
-                                """.formatted(articleId, userId)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(commentId.toString()))
                 .andExpect(jsonPath("$.articleId").value(articleId.toString()))
@@ -79,6 +83,7 @@ class CommentControllerTest {
         UUID commentId = UUID.randomUUID();
         UUID articleId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
+        UUID requestUserId = UUID.randomUUID();
 
         CommentDto comment = new CommentDto(
                 commentId,
@@ -91,21 +96,35 @@ class CommentControllerTest {
                 Instant.parse("2026-08-24T00:00:00Z")
         );
 
-        when(commentService.getComments(articleId)).thenReturn(List.of(comment));
+        CursorPageResponse<CommentDto> response =
+                CursorPageResponse.of(List.of(comment), null, null, 1, 1L, false);
+
+        when(commentService.getComments(
+                articleId, "createdAt", "DESC", null, null, 10, requestUserId
+        )).thenReturn(response);
 
         // when & then
         mockMvc.perform(get("/api/comments")
-                        .param("articleId", articleId.toString()))
+                        .param("articleId", articleId.toString())
+                        .param("orderBy", "createdAt")
+                        .param("direction", "DESC")
+                        .param("limit", "10")
+                        .header(REQUEST_USER_ID_HEADER, requestUserId.toString()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(commentId.toString()))
-                .andExpect(jsonPath("$[0].articleId").value(articleId.toString()))
-                .andExpect(jsonPath("$[0].userId").value(userId.toString()))
-                .andExpect(jsonPath("$[0].userNickname").value("댓글테스터"))
-                .andExpect(jsonPath("$[0].content").value("댓글 내용입니다."))
-                .andExpect(jsonPath("$[0].likeCount").value(0))
-                .andExpect(jsonPath("$[0].likedByMe").value(false));
+                .andExpect(jsonPath("$.content[0].id").value(commentId.toString()))
+                .andExpect(jsonPath("$.content[0].articleId").value(articleId.toString()))
+                .andExpect(jsonPath("$.content[0].userId").value(userId.toString()))
+                .andExpect(jsonPath("$.content[0].userNickname").value("댓글테스터"))
+                .andExpect(jsonPath("$.content[0].content").value("댓글 내용입니다."))
+                .andExpect(jsonPath("$.content[0].likeCount").value(0))
+                .andExpect(jsonPath("$.content[0].likedByMe").value(false))
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.hasNext").value(false));
 
-        verify(commentService).getComments(articleId);
+        verify(commentService).getComments(
+                articleId, "createdAt", "DESC", null, null, 10, requestUserId
+        );
     }
 
     @Test
@@ -132,13 +151,9 @@ class CommentControllerTest {
 
         // when & then
         mockMvc.perform(patch("/api/comments/{commentId}", commentId)
-                        .header("Monew-Request-User-ID", userId.toString())
+                        .header(REQUEST_USER_ID_HEADER, userId.toString())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                            {
-                              "content": "수정된 댓글입니다."
-                            }
-                            """))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(commentId.toString()))
                 .andExpect(jsonPath("$.articleId").value(articleId.toString()))
@@ -156,7 +171,7 @@ class CommentControllerTest {
 
         // when & then
         mockMvc.perform(delete("/api/comments/{commentId}", commentId)
-                        .header("Monew-Request-User-ID", userId.toString()))
+                        .header(REQUEST_USER_ID_HEADER, userId.toString()))
                 .andExpect(status().isNoContent());
 
         verify(commentService).delete(commentId, userId);
@@ -164,32 +179,28 @@ class CommentControllerTest {
 
     @Test
     void 댓글_수정시_사용자_ID_헤더가_없으면_400을_응답한다() throws Exception {
+        // given
         UUID commentId = UUID.randomUUID();
+        CommentUpdateRequest request = new CommentUpdateRequest("수정된 댓글입니다.");
 
+        // when & then
         mockMvc.perform(patch("/api/comments/{commentId}", commentId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                            {
-                              "content": "수정된 댓글입니다."
-                            }
-                            """))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void 댓글_등록시_내용이_비어있으면_400을_응답한다() throws Exception {
+        // given
         UUID articleId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
+        CommentCreateRequest request = new CommentCreateRequest(articleId, userId, "");
 
+        // when & then
         mockMvc.perform(post("/api/comments")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                            {
-                              "articleId": "%s",
-                              "userId": "%s",
-                              "content": ""
-                            }
-                            """.formatted(articleId, userId)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
 }

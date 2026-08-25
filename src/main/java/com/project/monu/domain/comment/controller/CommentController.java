@@ -4,13 +4,14 @@ import com.project.monu.domain.comment.dto.CommentDto;
 import com.project.monu.domain.comment.dto.request.CommentCreateRequest;
 import com.project.monu.domain.comment.dto.request.CommentUpdateRequest;
 import com.project.monu.domain.comment.service.CommentService;
+import com.project.monu.global.dto.CursorPageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.time.Instant;
 import java.util.UUID;
 
 @RestController
@@ -32,10 +33,24 @@ public class CommentController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CommentDto>> getComments(
-            @RequestParam UUID articleId
+    public ResponseEntity<CursorPageResponse<CommentDto>> getComments(
+            @RequestParam(required = false) UUID articleId,
+            @RequestParam String orderBy,
+            @RequestParam String direction,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(required = false) Instant after,
+            @RequestParam int limit,
+            @RequestHeader("Monew-Request-User-ID") UUID requestUserId
     ) {
-        List<CommentDto> comments = commentService.getComments(articleId);
+        CursorPageResponse<CommentDto> comments = commentService.getComments(
+                articleId,
+                orderBy,
+                direction,
+                cursor,
+                after,
+                limit,
+                requestUserId
+        );
 
         return ResponseEntity.ok(comments);
     }
