@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface ArticleInterestRepository extends JpaRepository<ArticleInterest, UUID> {
 
     void deleteAllByArticle_Id(UUID articleId);
+
+    void deleteAllByInterest_Id(UUID interestId);
 }
