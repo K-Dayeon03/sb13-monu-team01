@@ -5,7 +5,6 @@ import com.project.monu.domain.users.dto.request.UserLoginRequest;
 import com.project.monu.domain.users.dto.request.UserUpdateRequest;
 import com.project.monu.domain.users.dto.response.UserResponse;
 import com.project.monu.domain.users.service.UserService;
-import com.project.monu.global.constant.RequestHeaders;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -14,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
+
+  private static final String USER_ID_HEADER = "Monew-Request-User-ID";
 
   private final UserService userService;
 
@@ -39,9 +40,11 @@ public class UserController {
   @PatchMapping("/{userId}")
   public UserResponse update(
       @PathVariable UUID userId,
-      @RequestHeader(RequestHeaders.REQUEST_USER_ID) UUID requestUserId,
+      @RequestHeader(value = USER_ID_HEADER, required = false) UUID requestUserId,
       @Valid @RequestBody UserUpdateRequest request
   ) {
-    return userService.update(userId, requestUserId, request);
+    UUID requester = (requestUserId != null) ? requestUserId : userId;
+
+    return userService.update(userId, requester, request);
   }
 }
