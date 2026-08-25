@@ -1,5 +1,6 @@
 package com.project.monu.domain.interest.service;
 
+import com.project.monu.domain.article.repository.ArticleInterestRepository;
 import com.project.monu.domain.interest.dto.request.InterestRegisterRequest;
 import com.project.monu.domain.interest.dto.request.InterestSearchCondition;
 import com.project.monu.domain.interest.dto.request.InterestSortType;
@@ -31,10 +32,12 @@ public class InterestService {
 
     private final InterestRepository interestRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final ArticleInterestRepository articleInterestRepository;
 
-    public InterestService(InterestRepository interestRepository, SubscriptionRepository subscriptionRepository) {
+    public InterestService(InterestRepository interestRepository, SubscriptionRepository subscriptionRepository, ArticleInterestRepository articleInterestRepository) {
         this.interestRepository = interestRepository;
         this.subscriptionRepository = subscriptionRepository;
+        this.articleInterestRepository = articleInterestRepository;
     }
 
     @Transactional
@@ -70,6 +73,7 @@ public class InterestService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND));
 
         subscriptionRepository.deleteAllByInterest_Id(interestId);
+        articleInterestRepository.deleteAllByInterest_Id(interestId);
         interestRepository.delete(interest);
     }
 

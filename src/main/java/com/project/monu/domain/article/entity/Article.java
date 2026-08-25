@@ -83,6 +83,22 @@ public class Article {
     public void softDelete() {
         this.deletedAt = Instant.now();
     }
+
+    public void increaseViewCount() {
+        this.viewCount++;
+    }
+
+    public void increaseCommentCount() {
+        this.commentCount++;
+    }
+
+    public void decreaseCommentCount() {
+        // 논리 삭제가 중복 호출되거나 데이터가 어긋나도 댓글 수가 음수가 되지 않게 보호합니다.
+        if (this.commentCount > 0) {
+            this.commentCount--;
+        }
+    }
+
     // 삭제 여부 확인
     public boolean isDeleted() {
         return this.deletedAt != null;

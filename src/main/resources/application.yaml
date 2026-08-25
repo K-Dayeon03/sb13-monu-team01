@@ -1,6 +1,16 @@
 spring:
   application:
     name: sb13-monu-team01
+
+article:
+  backup:
+    storage: s3
+
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET}
+    region: ${AWS_REGION:ap-northeast-2}
+
 naver:
   api:
     client-id: ${NAVER_CLIENT_ID}

@@ -1,6 +1,7 @@
 package com.project.monu.domain.interest.service;
 
 
+import com.project.monu.domain.article.repository.ArticleInterestRepository;
 import com.project.monu.domain.interest.dto.request.InterestRegisterRequest;
 import com.project.monu.domain.interest.dto.request.InterestSearchCondition;
 import com.project.monu.domain.interest.dto.request.InterestSortType;
@@ -40,11 +41,14 @@ class InterestServiceTest {
     @Mock
     private SubscriptionRepository subscriptionRepository;
 
+    @Mock
+    private ArticleInterestRepository articleInterestRepository;
+
     private InterestService interestService;
 
     @BeforeEach
     void setUp() {
-        interestService = new InterestService(interestRepository, subscriptionRepository);
+        interestService = new InterestService(interestRepository, subscriptionRepository, articleInterestRepository);
     }
 
     @Test
@@ -126,6 +130,7 @@ class InterestServiceTest {
 
         // then
         verify(subscriptionRepository).deleteAllByInterest_Id(interest.getId());
+        verify(articleInterestRepository).deleteAllByInterest_Id(interest.getId());
         verify(interestRepository).delete(interest);
     }
 

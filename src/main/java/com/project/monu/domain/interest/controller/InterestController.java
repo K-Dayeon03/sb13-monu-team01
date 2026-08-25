@@ -7,6 +7,7 @@ import com.project.monu.domain.interest.dto.request.InterestUpdateRequest;
 import com.project.monu.domain.interest.dto.response.InterestDto;
 import com.project.monu.domain.interest.dto.response.SubscriptionDto;
 import com.project.monu.domain.interest.service.InterestService;
+import com.project.monu.global.constant.RequestHeaders;
 import com.project.monu.global.dto.CursorPageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +25,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @RequestMapping("/api/interests")
 public class InterestController {
-
-    private static final String USER_ID_HEADER = "Monew-Request-User-ID";
 
     private final InterestService interestService;
 
@@ -58,7 +57,7 @@ public class InterestController {
             @RequestParam(required = false) String cursor,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant after,
             @RequestParam int limit,
-            @RequestHeader(USER_ID_HEADER) UUID userId
+            @RequestHeader(RequestHeaders.REQUEST_USER_ID) UUID userId
     ) {
         InterestSearchCondition condition = new InterestSearchCondition(
                 keyword, parseSortType(orderBy), direction, cursor, after, limit
@@ -69,7 +68,7 @@ public class InterestController {
     @PostMapping("/{interestId}/subscriptions")
     public ResponseEntity<SubscriptionDto> subscribe(
             @PathVariable UUID interestId,
-            @RequestHeader(USER_ID_HEADER) UUID userId
+            @RequestHeader(RequestHeaders.REQUEST_USER_ID) UUID userId
     ) {
         SubscriptionDto result = interestService.subscribe(userId, interestId);
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
@@ -78,7 +77,7 @@ public class InterestController {
     @DeleteMapping("/{interestId}/subscriptions")
     public ResponseEntity<Void> unsubscribe(
             @PathVariable UUID interestId,
-            @RequestHeader(USER_ID_HEADER) UUID userId
+            @RequestHeader(RequestHeaders.REQUEST_USER_ID) UUID userId
     ) {
         interestService.unsubscribe(userId, interestId);
         return ResponseEntity.ok().build();
