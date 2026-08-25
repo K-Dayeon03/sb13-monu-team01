@@ -11,6 +11,7 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -30,18 +31,18 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
      * 정렬 기준에 따라 발행일, 댓글 수, 조회 수 기준 커서를 적용합니다.
      */
     private BooleanExpression cursorCondition(ArticleSearchCondition condition) {
-        ArticleSortType sortType = condition.sortType() == null
+        ArticleSortType sortType = condition.orderBy() == null
                 ? ArticleSortType.PUBLISH_DATE
-                : condition.sortType();
+                : condition.orderBy();
 
         return switch (sortType) {
-            case COMMENT_COUNT -> commentCountCursor(condition.nextCursor());
-            case VIEW_COUNT -> viewCountCursor(condition.nextCursor());
-            case PUBLISH_DATE -> publishDateCursor(condition.nextAfter(), condition.nextCursor());
+            case COMMENT_COUNT -> commentCountCursor(condition.cursor(), condition.direction());
+            case VIEW_COUNT -> viewCountCursor(condition.cursor(), condition.direction());
+            case PUBLISH_DATE -> publishDateCursor(condition.after(), condition.cursor(), condition.direction());
         };
     }
 
-    private BooleanExpression viewCountCursor(String nextCursor) {
+    private BooleanExpression viewCountCursor(String nextCursor, Sort.Direction direction) {
         Cursor cursor = parseCursor(nextCursor);
 
         if (cursor == null) {
@@ -49,13 +50,19 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
         }
 
         QArticle article = QArticle.article;
+
+        if (isAscending(direction)) {
+            return article.viewCount.gt(cursor.value())
+                    .or(article.viewCount.eq(cursor.value())
+                            .and(article.id.gt(cursor.id())));
+        }
 
         return article.viewCount.lt(cursor.value())
                 .or(article.viewCount.eq(cursor.value())
                         .and(article.id.lt(cursor.id())));
     }
 
-    private BooleanExpression commentCountCursor(String nextCursor) {
+    private BooleanExpression commentCountCursor(String nextCursor, Sort.Direction direction) {
         Cursor cursor = parseCursor(nextCursor);
 
         if (cursor == null) {
@@ -63,6 +70,12 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
         }
 
         QArticle article = QArticle.article;
+
+        if (isAscending(direction)) {
+            return article.commentCount.gt(cursor.value())
+                    .or(article.commentCount.eq(cursor.value())
+                            .and(article.id.gt(cursor.id())));
+        }
 
         return article.commentCount.lt(cursor.value())
                 .or(article.commentCount.eq(cursor.value())
@@ -81,7 +94,7 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
                 // 그래서 각 조건 메서드는 값이 없을 때 null을 반환하도록 만들었습니다.
                 .where(
                         keywordContains(condition.keyword()),
-                        sourceEq(condition.source()),
+                        sourceIn(condition.sourceIn()),
                         interestEq(condition.interestId()),
                         publishDateGoe(condition.publishDateFrom()),
                         publishDateLoe(condition.publishDateTo()),
@@ -91,7 +104,7 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
                 // 기본 정렬: 최신 기사순.
                 // 같은 발행 시각의 기사가 여러 개일 수 있으므로 id를 보조 정렬로 사용합니다.
                 .orderBy(orderBy(condition))
-                .limit(condition.size() + 1)
+                .limit(condition.limit() + 1)
                 .fetch();
     }
 
@@ -111,7 +124,7 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
                 .from(article)
                 .where(
                         keywordContains(condition.keyword()),
-                        sourceEq(condition.source()),
+                        sourceIn(condition.sourceIn()),
                         interestEq(condition.interestId()),
                         publishDateGoe(condition.publishDateFrom()),
                         publishDateLoe(condition.publishDateTo()),
@@ -132,14 +145,21 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
                 .or(QArticle.article.summary.containsIgnoreCase(keyword));
     }
 
-    // 출처 이름이 있으면 해당 출처의 기사만 조회합니다.
-    // Article.source는 ArticleSource 엔티티이므로 source.name으로 비교합니다.
-    private BooleanExpression sourceEq(String source) {
-        if (source == null || source.isBlank()) {
+    // 출처 이름 목록이 있으면 해당 출처 중 하나에 포함되는 기사만 조회합니다.
+    private BooleanExpression sourceIn(List<String> sourceIn) {
+        if (sourceIn == null || sourceIn.isEmpty()) {
             return null;
         }
 
-        return QArticle.article.source.name.eq(source);
+        List<String> filteredSources = sourceIn.stream()
+                .filter(source -> source != null && !source.isBlank())
+                .toList();
+
+        if (filteredSources.isEmpty()) {
+            return null;
+        }
+
+        return QArticle.article.source.name.in(filteredSources);
     }
 
     // 관심사 ID가 있으면 해당 관심사와 연결된 기사만 조회합니다.
@@ -183,7 +203,7 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
     // 다음 페이지 조회 시 마지막으로 본 발행일보다 이전 기사만 조회합니다.
     // 최신순(desc) 정렬이므로 다음 페이지는 nextAfter보다 과거 발행일을 가져와야 합니다.
     // 발행일 정렬 커서는 nextAfter(발행일)와 nextCursor(기사 ID)가 한 쌍으로 들어와야 합니다.
-    private BooleanExpression publishDateCursor(Instant nextAfter, String nextCursor) {
+    private BooleanExpression publishDateCursor(Instant nextAfter, String nextCursor, Sort.Direction direction) {
         boolean hasNextAfter = nextAfter != null;
         boolean hasNextCursor = nextCursor != null && !nextCursor.isBlank();
 
@@ -200,6 +220,12 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
         try {
             UUID cursorId = UUID.fromString(nextCursor);
             QArticle article = QArticle.article;
+
+            if (isAscending(direction)) {
+                return article.publishDate.gt(nextAfter)
+                        .or(article.publishDate.eq(nextAfter)
+                                .and(article.id.gt(cursorId)));
+            }
 
             return article.publishDate.lt(nextAfter)
                     .or(article.publishDate.eq(nextAfter)
@@ -219,24 +245,28 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
     private OrderSpecifier<?>[] orderBy(ArticleSearchCondition condition) {
         QArticle article = QArticle.article;
 
-        ArticleSortType sortType = condition.sortType() == null
+        ArticleSortType sortType = condition.orderBy() == null
                 ? ArticleSortType.PUBLISH_DATE
-                : condition.sortType();
+                : condition.orderBy();
 
         return switch (sortType) {
             case COMMENT_COUNT -> new OrderSpecifier[]{
-                    article.commentCount.desc(),
-                    article.id.desc()
+                    isAscending(condition.direction()) ? article.commentCount.asc() : article.commentCount.desc(),
+                    isAscending(condition.direction()) ? article.id.asc() : article.id.desc()
             };
             case VIEW_COUNT -> new OrderSpecifier[]{
-                    article.viewCount.desc(),
-                    article.id.desc()
+                    isAscending(condition.direction()) ? article.viewCount.asc() : article.viewCount.desc(),
+                    isAscending(condition.direction()) ? article.id.asc() : article.id.desc()
             };
             case PUBLISH_DATE -> new OrderSpecifier[]{
-                    article.publishDate.desc(),
-                    article.id.desc()
+                    isAscending(condition.direction()) ? article.publishDate.asc() : article.publishDate.desc(),
+                    isAscending(condition.direction()) ? article.id.asc() : article.id.desc()
             };
         };
+    }
+
+    private boolean isAscending(Sort.Direction direction) {
+        return direction == Sort.Direction.ASC;
     }
 
     private record Cursor(Long value, UUID id) {

@@ -27,6 +27,7 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
@@ -199,7 +200,7 @@ class ArticleServiceTest {
                 ArgumentCaptor.forClass(ArticleSearchCondition.class);
 
         verify(articleRepository).searchByCursor(conditionCaptor.capture());
-        assertThat(conditionCaptor.getValue().size()).isEqualTo(10);
+        assertThat(conditionCaptor.getValue().limit()).isEqualTo(10);
         assertThat(response.size()).isEqualTo(10);
     }
 
@@ -221,7 +222,7 @@ class ArticleServiceTest {
                 ArgumentCaptor.forClass(ArticleSearchCondition.class);
 
         verify(articleRepository).searchByCursor(conditionCaptor.capture());
-        assertThat(conditionCaptor.getValue().size()).isEqualTo(100);
+        assertThat(conditionCaptor.getValue().limit()).isEqualTo(100);
         assertThat(response.size()).isEqualTo(100);
     }
 
@@ -559,6 +560,7 @@ class ArticleServiceTest {
                 null,
                 null,
                 sortType,
+                Sort.Direction.DESC,
                 null,
                 null,
                 size

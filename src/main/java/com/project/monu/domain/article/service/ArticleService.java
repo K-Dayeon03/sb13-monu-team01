@@ -20,6 +20,7 @@ import com.project.monu.global.dto.CursorPageResponse;
 import com.project.monu.global.exception.BusinessException;
 import com.project.monu.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -50,18 +51,19 @@ public class ArticleService {
         if (userId == null || !userRepository.existsByIdAndDeletedAtIsNull(userId)) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
-        // size가 0 이하이면 기본 페이지 크기 10으로, 너무 크면 최대 100으로 보정합니다.
-        // 이후 Repository에서는 size + 1개를 조회해서 다음 페이지 존재 여부를 판단합니다.
-        int size = normalizeSize(condition.size());
+        // limit이 0 이하이면 기본 페이지 크기 10으로, 너무 크면 최대 100으로 보정합니다.
+        // 이후 Repository에서는 limit + 1개를 조회해서 다음 페이지 존재 여부를 판단합니다.
+        int size = normalizeSize(condition.limit());
         ArticleSearchCondition normalizedCondition = new ArticleSearchCondition(
                 condition.keyword(),
                 condition.interestId(),
-                condition.source(),
+                condition.sourceIn(),
                 condition.publishDateFrom(),
                 condition.publishDateTo(),
-                condition.sortType(),
-                condition.nextAfter(),
-                condition.nextCursor(),
+                condition.orderBy() == null ? ArticleSortType.PUBLISH_DATE : condition.orderBy(),
+                condition.direction() == null ? Sort.Direction.DESC : condition.direction(),
+                condition.after(),
+                condition.cursor(),
                 size
         );
 
@@ -112,7 +114,7 @@ public class ArticleService {
 
         return new CursorPageResponse<>(
                 content,
-                hasNext ? createNextCursor(lastArticle, normalizedCondition.sortType()) : null,
+                hasNext ? createNextCursor(lastArticle, normalizedCondition.orderBy()) : null,
                 hasNext && lastArticle != null ? lastArticle.getPublishDate() : null,
                 size,
                 articleRepository.countByCondition(normalizedCondition),

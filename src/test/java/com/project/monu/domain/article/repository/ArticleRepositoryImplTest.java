@@ -9,6 +9,7 @@ import com.project.monu.global.config.JpaAuditingConfig;
 import com.project.monu.global.config.QuerydslConfig;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Sort;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
@@ -95,6 +96,40 @@ class ArticleRepositoryImplTest {
         // then
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getSource().getName()).isEqualTo("NAVER");
+    }
+
+    @Test
+    void sourceIn에_포함된_출처들로_필터링된다() {
+        // given
+        ArticleSource naver = source("NAVER");
+        ArticleSource chosun = source("CHOSUN");
+        ArticleSource hankyung = source("HANKYUNG");
+
+        Article naverArticle = article(naver, "네이버 기사", "요약", "2026-08-18T00:00:00Z", 1L, 10L);
+        Article chosunArticle = article(chosun, "조선 기사", "요약", "2026-08-17T00:00:00Z", 1L, 10L);
+        Article hankyungArticle = article(hankyung, "한경 기사", "요약", "2026-08-16T00:00:00Z", 1L, 10L);
+        flushAndClear();
+
+        ArticleSearchCondition condition = new ArticleSearchCondition(
+                null,
+                null,
+                List.of("NAVER", "CHOSUN"),
+                null,
+                null,
+                ArticleSortType.PUBLISH_DATE,
+                Sort.Direction.DESC,
+                null,
+                null,
+                10
+        );
+
+        // when
+        List<Article> result = articleRepository.searchByCursor(condition);
+
+        // then
+        assertThat(result).extracting(Article::getId)
+                .containsExactly(naverArticle.getId(), chosunArticle.getId())
+                .doesNotContain(hankyungArticle.getId());
     }
 
     @Test
@@ -193,6 +228,28 @@ class ArticleRepositoryImplTest {
         // then
         assertThat(result).extracting(Article::getId)
                 .containsExactly(high.getId(), low.getId());
+    }
+
+    @Test
+    void 발행일_기준으로_오름차순_정렬된다() {
+        // given
+        ArticleSource source = source("NAVER");
+
+        Article oldArticle = article(source, "오래된 기사", "요약", "2026-08-16T00:00:00Z", 1L, 10L);
+        Article recentArticle = article(source, "최신 기사", "요약", "2026-08-18T00:00:00Z", 1L, 10L);
+        flushAndClear();
+
+        ArticleSearchCondition condition = condition(
+                null, null, null, null, null,
+                ArticleSortType.PUBLISH_DATE, Sort.Direction.ASC, null, null, 10
+        );
+
+        // when
+        List<Article> result = articleRepository.searchByCursor(condition);
+
+        // then
+        assertThat(result).extracting(Article::getId)
+                .containsExactly(oldArticle.getId(), recentArticle.getId());
     }
 
     @Test
@@ -507,9 +564,32 @@ class ArticleRepositoryImplTest {
             String nextCursor,
             int size
     ) {
+        return condition(keyword, interestId, source, from, to, sortType, Sort.Direction.DESC, nextAfter, nextCursor, size);
+    }
+
+    private ArticleSearchCondition condition(
+            String keyword,
+            UUID interestId,
+            String source,
+            Instant from,
+            Instant to,
+            ArticleSortType sortType,
+            Sort.Direction direction,
+            Instant nextAfter,
+            String nextCursor,
+            int size
+    ) {
         return new ArticleSearchCondition(
-                keyword, interestId, source, from, to,
-                sortType, nextAfter, nextCursor, size
+                keyword,
+                interestId,
+                source == null || source.isBlank() ? null : List.of(source),
+                from,
+                to,
+                sortType,
+                direction,
+                nextAfter,
+                nextCursor,
+                size
         );
     }
 

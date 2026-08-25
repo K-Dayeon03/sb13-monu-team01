@@ -18,18 +18,18 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ArticleBackupService {
-
-    // 지금은 로컬 파일 저장소를 쓰지만, 기존 엔티티 컬럼명이 s3Bucket이라 저장소 이름을 이 값에 기록합니다.
-    private static final String STORAGE_NAME = "local";
 
     // 저장소 key는 로컬 파일 경로이면서, 나중에 S3 object key로도 그대로 사용할 수 있게 잡았습니다.
     private static final String BACKUP_PREFIX = "article-backups/";
@@ -69,6 +69,7 @@ public class ArticleBackupService {
                 .collect(Collectors.joining(System.lineSeparator()));
 
         String key = backupKey(date);
+        String storageName = backupStorage.storageName();
         backupStorage.save(key, content);
 
         // s3_key unique 제약 때문에 같은 날짜 백업을 다시 실행하면 기존 이력을 갱신합니다.
@@ -80,13 +81,34 @@ public class ArticleBackupService {
                 })
                 .orElseGet(() -> ArticleBackup.create(
                         date,
-                        STORAGE_NAME,
+                        storageName,
                         key,
                         (long) articles.size()
                 ));
         articleBackupRepository.save(backup);
 
-        return new ArticleBackupResultDto(date, STORAGE_NAME, key, articles.size());
+        return new ArticleBackupResultDto(date, storageName, key, articles.size());
+    }
+
+    /**
+     * Swagger API의 from/to date-time 범위를 날짜 단위 복구 작업으로 변환합니다.
+     */
+    @Transactional
+    public List<ArticleRestoreResultDto> restore(Instant from, Instant to) {
+        if (from.isAfter(to)) {
+            throw new IllegalArgumentException("복구 시작일은 종료일보다 늦을 수 없습니다.");
+        }
+
+        LocalDate currentDate = from.atZone(BACKUP_ZONE).toLocalDate();
+        LocalDate endDate = to.atZone(BACKUP_ZONE).toLocalDate();
+        List<ArticleRestoreResultDto> results = new ArrayList<>();
+
+        while (!currentDate.isAfter(endDate)) {
+            results.add(restore(currentDate));
+            currentDate = currentDate.plusDays(1);
+        }
+
+        return results;
     }
 
     /**
@@ -114,7 +136,7 @@ public class ArticleBackupService {
                 .map(this::fromJson)
                 .toList();
 
-        long restoredCount = 0;
+        List<UUID> restoredArticleIds = new ArrayList<>();
 
         for (ArticleBackupRecord record : records) {
             // 현재 DB에 이미 같은 원문 링크가 있으면 정상 데이터로 보고 복구 대상에서 제외합니다.
@@ -136,15 +158,20 @@ public class ArticleBackupService {
                     .summary(record.summary())
                     .build();
 
-            articleRepository.save(restoredArticle);
-            restoredCount++;
+            Article savedArticle = articleRepository.save(restoredArticle);
+            restoredArticleIds.add(savedArticle.getId());
         }
 
         // 실제로 복구된 기사가 0건이어도 복구 작업을 수행했다는 사실은 이력으로 남깁니다.
+        long restoredCount = restoredArticleIds.size();
         ArticleRestore restore = ArticleRestore.create(date, restoredCount, backup);
         articleRestoreRepository.save(restore);
 
-        return new ArticleRestoreResultDto(date, key, restoredCount);
+        return new ArticleRestoreResultDto(
+                date.atStartOfDay(BACKUP_ZONE).toInstant(),
+                restoredArticleIds,
+                restoredCount
+        );
     }
 
     private String backupKey(LocalDate date) {
