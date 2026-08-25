@@ -148,4 +148,31 @@ public class ArticleService {
                 .map(ArticleSource::getName)
                 .toList();
     }
+
+    public ArticleDto getArticle(UUID articleId, UUID userId) {
+        if (userId == null || !userRepository.existsByIdAndDeletedAtIsNull(userId)) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        Article article = articleRepository
+                .findByIdAndDeletedAtIsNull(articleId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND));
+
+        boolean viewedByMe = articleViewRepository
+                .findViewedArticleIds(userId, List.of(articleId))
+                .contains(articleId);
+
+        return new ArticleDto(
+                article.getId(),
+                article.getSource().getName(),
+                article.getSourceUrl(),
+                article.getTitle(),
+                article.getPublishDate(),
+                article.getSummary(),
+                article.getCommentCount(),
+                article.getViewCount(),
+                viewedByMe
+        );
+    }
+
 }

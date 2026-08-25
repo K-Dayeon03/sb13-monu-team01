@@ -267,4 +267,93 @@ class ArticleControllerTest {
 
         verify(articleService).getSources();
     }
+
+    @Test
+    void 기사_ID로_단건_조회하면_200을_응답한다() throws Exception {
+        // given
+        UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        ArticleDto article = new ArticleDto(
+                articleId,
+                "NAVER",
+                "https://example.com/article/1",
+                "테스트 기사",
+                Instant.parse("2026-08-24T00:00:00Z"),
+                "테스트 요약",
+                3L,
+                10L,
+                true
+        );
+
+        when(articleService.getArticle(articleId, userId))
+                .thenReturn(article);
+
+        MockMvc mockMvc = MockMvcBuilders
+                .standaloneSetup(articleController)
+                .build();
+
+        // when & then
+        mockMvc.perform(get("/api/articles/{articleId}", articleId)
+                        .header("Monew-Request-User-ID", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(articleId.toString()))
+                .andExpect(jsonPath("$.source").value("NAVER"))
+                .andExpect(jsonPath("$.sourceUrl")
+                        .value("https://example.com/article/1"))
+                .andExpect(jsonPath("$.title").value("테스트 기사"))
+                .andExpect(jsonPath("$.summary").value("테스트 요약"))
+                .andExpect(jsonPath("$.commentCount").value(3))
+                .andExpect(jsonPath("$.viewCount").value(10))
+                .andExpect(jsonPath("$.viewedByMe").value(true));
+
+        verify(articleService).getArticle(articleId, userId);
+    }
+
+    @Test
+    void 존재하지_않는_기사를_단건_조회하면_404를_응답한다()
+            throws Exception {
+        // given
+        UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        MockMvc mockMvc = MockMvcBuilders
+                .standaloneSetup(articleController)
+                .setControllerAdvice(new GlobalHandlerException())
+                .build();
+
+        when(articleService.getArticle(articleId, userId))
+                .thenThrow(
+                        new BusinessException(ErrorCode.ARTICLE_NOT_FOUND)
+                );
+
+        // when & then
+        mockMvc.perform(get("/api/articles/{articleId}", articleId)
+                        .header("Monew-Request-User-ID", userId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code")
+                        .value("ARTICLE_NOT_FOUND"))
+                .andExpect(jsonPath("$.message")
+                        .value("기사를 찾을 수 없습니다."))
+                .andExpect(jsonPath("$.status").value(404));
+
+        verify(articleService).getArticle(articleId, userId);
+    }
+
+    @Test
+    void 요청자_헤더_없이_기사를_단건_조회하면_400을_응답한다()
+            throws Exception {
+        // given
+        UUID articleId = UUID.randomUUID();
+
+        MockMvc mockMvc = MockMvcBuilders
+                .standaloneSetup(articleController)
+                .build();
+
+        // when & then
+        mockMvc.perform(get("/api/articles/{articleId}", articleId))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(articleService);
+    }
 }
