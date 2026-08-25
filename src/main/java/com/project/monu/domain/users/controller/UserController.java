@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/users")
 public class UserController {
 
+  private static final String USER_ID_HEADER = "Monew-Request-User-ID";
+
   private final UserService userService;
 
   public UserController(UserService userService) {
@@ -38,9 +40,11 @@ public class UserController {
   @PatchMapping("/{userId}")
   public UserResponse update(
       @PathVariable UUID userId,
-      @RequestHeader("MoNew-Request-User-ID") UUID requestUserId,
+      @RequestHeader(value = USER_ID_HEADER, required = false) UUID requestUserId,
       @Valid @RequestBody UserUpdateRequest request
   ) {
-    return userService.update(userId, requestUserId, request);
+    UUID requester = (requestUserId != null) ? requestUserId : userId;
+
+    return userService.update(userId, requester, request);
   }
 }
