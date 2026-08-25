@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -39,5 +40,10 @@ public interface ArticleViewRepository extends JpaRepository<ArticleView, UUID> 
     Set<UUID> findViewedArticleIds(
             @Param("userId") UUID userId,
             @Param("articleIds") List<UUID> articleIds
+    );
+
+    Optional<ArticleView> findByViewerIdAndArticleId(
+            UUID viewerId,
+            UUID articleId
     );
 }

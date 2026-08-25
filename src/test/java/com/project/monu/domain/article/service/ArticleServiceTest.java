@@ -3,6 +3,7 @@ package com.project.monu.domain.article.service;
 import com.project.monu.domain.article.dto.response.ArticleDto;
 import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
 import com.project.monu.domain.article.dto.request.ArticleSortType;
+import com.project.monu.domain.article.dto.response.ArticleViewDto;
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.entity.ArticleSource;
 import com.project.monu.domain.article.entity.ArticleView;
@@ -478,18 +479,11 @@ class ArticleServiceTest {
 
         // then
         assertThat(result.id()).isEqualTo(articleId);
-        assertThat(result.viewCount()).isEqualTo(1L);
-        assertThat(result.viewedByMe()).isTrue();
-        assertThat(article.getViewCount()).isEqualTo(1L);
+        assertThat(result.viewCount()).isZero();
+        assertThat(result.viewedByMe()).isFalse();
+        assertThat(article.getViewCount()).isZero();
 
-        ArgumentCaptor<ArticleView> articleViewCaptor =
-                ArgumentCaptor.forClass(ArticleView.class);
-
-        verify(articleViewRepository).save(articleViewCaptor.capture());
-
-        ArticleView savedArticleView = articleViewCaptor.getValue();
-        assertThat(savedArticleView.getViewer()).isEqualTo(user);
-        assertThat(savedArticleView.getArticle()).isEqualTo(article);
+        verify(articleViewRepository, never()).save(any(ArticleView.class));
     }
 
     @Test
@@ -549,6 +543,180 @@ class ArticleServiceTest {
         verifyNoInteractions(articleRepository);
         verifyNoInteractions(articleViewRepository);
     }
+
+    @Test
+    void 처음_조회한_기사면_조회_이력을_저장하고_조회수를_증가시킨다() {
+        // given
+        UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        User user = user(userId);
+
+        ArticleSource source = ArticleSource.builder()
+                .name("NAVER")
+                .type(SourceType.API)
+                .sourceUrl("https://naver.example.com")
+                .build();
+
+        Article article = Article.builder()
+                .source(source)
+                .sourceUrl("https://example.com/article/1")
+                .title("테스트 기사")
+                .publishDate(Instant.parse("2026-08-24T00:00:00Z"))
+                .summary("테스트 요약")
+                .build();
+
+        ReflectionTestUtils.setField(article, "id", articleId);
+
+        when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                .thenReturn(Optional.of(user));
+
+        when(articleRepository.findByIdAndDeletedAtIsNull(articleId))
+                .thenReturn(Optional.of(article));
+
+        when(articleViewRepository.findByViewerIdAndArticleId(
+                userId,
+                articleId
+        )).thenReturn(Optional.empty());
+
+        when(articleViewRepository.save(any(ArticleView.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        ArticleViewDto result =
+                articleService.registerView(articleId, userId);
+
+        // then
+        assertThat(article.getViewCount()).isEqualTo(1L);
+        assertThat(result.viewedBy()).isEqualTo(userId);
+        assertThat(result.articleId()).isEqualTo(articleId);
+        assertThat(result.articleViewCount()).isEqualTo(1L);
+
+        ArgumentCaptor<ArticleView> captor =
+                ArgumentCaptor.forClass(ArticleView.class);
+
+        verify(articleViewRepository).save(captor.capture());
+
+        ArticleView savedView = captor.getValue();
+
+        assertThat(savedView.getViewer()).isEqualTo(user);
+        assertThat(savedView.getArticle()).isEqualTo(article);
+    }
+
+    @Test
+    void 이미_조회한_기사면_기존_조회_이력을_반환하고_조회수를_증가시키지_않는다() {
+        // given
+        UUID articleViewId = UUID.randomUUID();
+        UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        User user = user(userId);
+
+        ArticleSource source = ArticleSource.builder()
+                .name("NAVER")
+                .type(SourceType.API)
+                .sourceUrl("https://naver.example.com")
+                .build();
+
+        Article article = Article.builder()
+                .source(source)
+                .sourceUrl("https://example.com/article/1")
+                .title("테스트 기사")
+                .publishDate(Instant.parse("2026-08-24T00:00:00Z"))
+                .summary("테스트 요약")
+                .build();
+
+        ReflectionTestUtils.setField(article, "id", articleId);
+
+        ArticleView existingView = ArticleView.builder()
+                .viewer(user)
+                .article(article)
+                .build();
+
+        ReflectionTestUtils.setField(
+                existingView,
+                "id",
+                articleViewId
+        );
+
+        when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                .thenReturn(Optional.of(user));
+
+        when(articleRepository.findByIdAndDeletedAtIsNull(articleId))
+                .thenReturn(Optional.of(article));
+
+        when(articleViewRepository.findByViewerIdAndArticleId(
+                userId,
+                articleId
+        )).thenReturn(Optional.of(existingView));
+
+        // when
+        ArticleViewDto result =
+                articleService.registerView(articleId, userId);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo(articleViewId);
+        assertThat(result.viewedBy()).isEqualTo(userId);
+        assertThat(result.articleId()).isEqualTo(articleId);
+        assertThat(article.getViewCount()).isZero();
+
+        verify(articleViewRepository, never())
+                .save(any(ArticleView.class));
+    }
+
+    @Test
+    void 존재하지_않는_사용자가_조회수를_등록하면_예외가_발생한다() {
+        // given
+        UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                .thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() ->
+                articleService.registerView(articleId, userId))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> {
+                    BusinessException businessException =
+                            (BusinessException) exception;
+
+                    assertThat(businessException.getErrorCode())
+                            .isEqualTo(ErrorCode.USER_NOT_FOUND);
+                });
+
+        verifyNoInteractions(articleRepository);
+        verifyNoInteractions(articleViewRepository);
+    }
+
+    @Test
+    void 존재하지_않는_기사에_조회수를_등록하면_예외가_발생한다() {
+        // given
+        UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        when(userRepository.findByIdAndDeletedAtIsNull(userId))
+                .thenReturn(Optional.of(user(userId)));
+
+        when(articleRepository.findByIdAndDeletedAtIsNull(articleId))
+                .thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() ->
+                articleService.registerView(articleId, userId))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> {
+                    BusinessException businessException =
+                            (BusinessException) exception;
+
+                    assertThat(businessException.getErrorCode())
+                            .isEqualTo(ErrorCode.ARTICLE_NOT_FOUND);
+                });
+
+        verifyNoInteractions(articleViewRepository);
+    }
+
 
 
 
