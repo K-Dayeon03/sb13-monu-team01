@@ -1,6 +1,7 @@
 package com.project.monu.domain.notification.repository;
 
 import com.project.monu.domain.notification.entity.Notification;
+import com.project.monu.domain.notification.entity.NotificationResourceType;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -13,4 +14,9 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     List<Notification> findByUserIdAndConfirmedFalse(UUID userId);
 
     long deleteByConfirmedTrueAndUpdatedAtBefore(Instant threshold);
+
+    void deleteAllByResourceTypeAndResourceIdIn(
+            NotificationResourceType resourceType,
+            List<UUID> resourceIds
+    );
 }

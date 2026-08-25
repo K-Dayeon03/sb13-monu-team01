@@ -7,4 +7,6 @@ import java.util.UUID;
 
 // 관심사 매칭 기록 저장용
 public interface ArticleInterestRepository extends JpaRepository<ArticleInterest, UUID> {
+
+    void deleteAllByArticle_Id(UUID articleId);
 }

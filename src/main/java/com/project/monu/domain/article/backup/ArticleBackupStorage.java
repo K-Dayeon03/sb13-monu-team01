@@ -17,4 +17,7 @@ public interface ArticleBackupStorage {
 
     // 복구 요청 날짜에 해당하는 백업 파일이 있는지 먼저 확인합니다.
     boolean exists(String key);
+
+    // 백업 이력에 남길 저장소 이름입니다. 로컬은 "local", S3는 bucket 이름을 사용합니다.
+    String storageName();
 }

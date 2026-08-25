@@ -16,5 +16,18 @@ VIEW_COUNT 정렬
 public enum ArticleSortType {
     PUBLISH_DATE,
     COMMENT_COUNT,
-    VIEW_COUNT
+    VIEW_COUNT;
+
+    public static ArticleSortType from(String orderBy) {
+        if (orderBy == null || orderBy.isBlank()) {
+            return PUBLISH_DATE;
+        }
+
+        return switch (orderBy) {
+            case "publishDate" -> PUBLISH_DATE;
+            case "commentCount" -> COMMENT_COUNT;
+            case "viewCount" -> VIEW_COUNT;
+            default -> throw new IllegalArgumentException("Invalid article orderBy: " + orderBy);
+        };
+    }
 }

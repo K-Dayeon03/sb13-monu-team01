@@ -132,7 +132,7 @@ class CommentControllerTest {
 
         // when & then
         mockMvc.perform(patch("/api/comments/{commentId}", commentId)
-                        .header("Monew-Request-User-ID", userId.toString())
+                        .header("MoNew-Request-User-ID", userId.toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                             {
@@ -156,7 +156,7 @@ class CommentControllerTest {
 
         // when & then
         mockMvc.perform(delete("/api/comments/{commentId}", commentId)
-                        .header("Monew-Request-User-ID", userId.toString()))
+                        .header("MoNew-Request-User-ID", userId.toString()))
                 .andExpect(status().isNoContent());
 
         verify(commentService).delete(commentId, userId);

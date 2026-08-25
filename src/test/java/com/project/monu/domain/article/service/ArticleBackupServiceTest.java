@@ -1,8 +1,8 @@
 package com.project.monu.domain.article.service;
 
 import com.project.monu.domain.article.backup.ArticleBackupStorage;
-import com.project.monu.domain.article.dto.ArticleBackupResultDto;
-import com.project.monu.domain.article.dto.ArticleRestoreResultDto;
+import com.project.monu.domain.article.dto.response.ArticleBackupResultDto;
+import com.project.monu.domain.article.dto.response.ArticleRestoreResultDto;
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.entity.ArticleBackup;
 import com.project.monu.domain.article.entity.ArticleRestore;
@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -25,9 +26,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -72,6 +75,7 @@ class ArticleBackupServiceTest {
 
         given(articleBackupRepository.findByS3Key("article-backups/2026-08-21.jsonl"))
                 .willReturn(Optional.empty());
+        given(backupStorage.storageName()).willReturn("local");
 
         // when
         ArticleBackupResultDto result = service().backup(backupDate);
@@ -115,6 +119,7 @@ class ArticleBackupServiceTest {
                 {"sourceName":"NAVER","sourceUrl":"https://example.com/news/2","title":"유실 기사","publishDate":"2026-08-21T02:00:00Z","summary":"요약2"}
                 """;
         ArticleSource naver = source("NAVER");
+        UUID restoredArticleId = UUID.randomUUID();
         ArticleBackup backup = ArticleBackup.create(
                 restoreDate,
                 "local",
@@ -129,13 +134,18 @@ class ArticleBackupServiceTest {
         given(articleRepository.existsBySourceUrl("https://example.com/news/1")).willReturn(true);
         given(articleRepository.existsBySourceUrl("https://example.com/news/2")).willReturn(false);
         given(articleSourceRepository.findByName("NAVER")).willReturn(Optional.of(naver));
+        given(articleRepository.save(any(Article.class))).willAnswer(invocation -> {
+            Article savedArticle = invocation.getArgument(0);
+            ReflectionTestUtils.setField(savedArticle, "id", restoredArticleId);
+            return savedArticle;
+        });
 
         // when
         ArticleRestoreResultDto result = service().restore(restoreDate);
 
         // then
-        assertThat(result.restoreDate()).isEqualTo(restoreDate);
-        assertThat(result.backupKey()).isEqualTo(key);
+        assertThat(result.restoreDate()).isEqualTo(Instant.parse("2026-08-20T15:00:00Z"));
+        assertThat(result.restoredArticleIds()).containsExactly(restoredArticleId);
         assertThat(result.restoredArticleCount()).isEqualTo(1);
 
         ArgumentCaptor<Article> articleCaptor = ArgumentCaptor.forClass(Article.class);

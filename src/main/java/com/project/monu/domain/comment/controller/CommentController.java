@@ -4,6 +4,7 @@ import com.project.monu.domain.comment.dto.CommentDto;
 import com.project.monu.domain.comment.dto.request.CommentCreateRequest;
 import com.project.monu.domain.comment.dto.request.CommentUpdateRequest;
 import com.project.monu.domain.comment.service.CommentService;
+import com.project.monu.global.constant.RequestHeaders;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -43,7 +44,7 @@ public class CommentController {
     @PatchMapping("/{commentId}")
     public ResponseEntity<CommentDto> update(
             @PathVariable UUID commentId,
-            @RequestHeader("Monew-Request-User-ID") UUID requestUserId,
+            @RequestHeader(RequestHeaders.REQUEST_USER_ID) UUID requestUserId,
             @Valid @RequestBody CommentUpdateRequest request
     ) {
         CommentDto comment = commentService.update(commentId, requestUserId, request);
@@ -54,7 +55,7 @@ public class CommentController {
     @DeleteMapping("/{commentId}")
     public ResponseEntity<Void> delete(
             @PathVariable UUID commentId,
-            @RequestHeader("Monew-Request-User-ID") UUID requestUserId
+            @RequestHeader(RequestHeaders.REQUEST_USER_ID) UUID requestUserId
     ) {
         commentService.delete(commentId, requestUserId);
 
