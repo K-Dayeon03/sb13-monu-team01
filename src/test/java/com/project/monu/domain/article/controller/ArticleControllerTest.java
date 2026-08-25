@@ -1,6 +1,6 @@
 package com.project.monu.domain.article.controller;
 
-import com.project.monu.domain.article.dto.ArticleDto;
+import com.project.monu.domain.article.dto.response.ArticleDto;
 import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
 import com.project.monu.domain.article.dto.request.ArticleSortType;
 import com.project.monu.domain.article.service.ArticleService;
@@ -240,6 +240,66 @@ class ArticleControllerTest {
     }
 
     @Test
+    void 기사를_물리_삭제하면_204를_응답한다() throws Exception {
+        // given
+        MockMvc mockMvc = MockMvcBuilders
+                .standaloneSetup(articleController)
+                .build();
+
+        UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        // when & then
+        mockMvc.perform(delete("/api/articles/{articleId}/hard", articleId)
+                        .header("MoNew-Request-User-ID", userId))
+                .andExpect(status().isNoContent());
+
+        verify(articleService).hardDelete(articleId);
+    }
+
+    @Test
+    void 존재하지_않는_기사를_물리_삭제하면_404를_응답한다() throws Exception {
+        // given
+        MockMvc mockMvc = MockMvcBuilders
+                .standaloneSetup(articleController)
+                .setControllerAdvice(new GlobalHandlerException())
+                .build();
+
+        UUID articleId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        doThrow(new BusinessException(ErrorCode.ARTICLE_NOT_FOUND))
+                .when(articleService)
+                .hardDelete(articleId);
+
+        // when & then
+        mockMvc.perform(delete("/api/articles/{articleId}/hard", articleId)
+                        .header("MoNew-Request-User-ID", userId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ARTICLE_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("기사를 찾을 수 없습니다."))
+                .andExpect(jsonPath("$.status").value(404));
+
+        verify(articleService).hardDelete(articleId);
+    }
+
+    @Test
+    void 헤더없이_물리_삭제하면_400을_응답한다() throws Exception {
+        // given
+        MockMvc mockMvc = MockMvcBuilders
+                .standaloneSetup(articleController)
+                .build();
+
+        UUID articleId = UUID.randomUUID();
+
+        // when & then
+        mockMvc.perform(delete("/api/articles/{articleId}/hard", articleId))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(articleService);
+    }
+
+    @Test
     void 기사_출처_목록을_조회하면_200을_응답한다() throws Exception {
 
         // given
@@ -295,7 +355,7 @@ class ArticleControllerTest {
 
         // when & then
         mockMvc.perform(get("/api/articles/{articleId}", articleId)
-                        .header("Monew-Request-User-ID", userId))
+                        .header("MoNew-Request-User-ID", userId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(articleId.toString()))
                 .andExpect(jsonPath("$.source").value("NAVER"))
@@ -329,7 +389,7 @@ class ArticleControllerTest {
 
         // when & then
         mockMvc.perform(get("/api/articles/{articleId}", articleId)
-                        .header("Monew-Request-User-ID", userId))
+                        .header("MoNew-Request-User-ID", userId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code")
                         .value("ARTICLE_NOT_FOUND"))

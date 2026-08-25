@@ -1,8 +1,8 @@
 package com.project.monu.domain.article.service;
 
 import com.project.monu.domain.article.backup.ArticleBackupStorage;
-import com.project.monu.domain.article.dto.ArticleBackupResultDto;
-import com.project.monu.domain.article.dto.ArticleRestoreResultDto;
+import com.project.monu.domain.article.dto.response.ArticleBackupResultDto;
+import com.project.monu.domain.article.dto.response.ArticleRestoreResultDto;
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.entity.ArticleBackup;
 import com.project.monu.domain.article.entity.ArticleRestore;

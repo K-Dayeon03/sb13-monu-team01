@@ -29,4 +29,13 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
       AND c.deletedAt IS NULL
     """)
     Optional<Comment> findActiveById(@Param("commentId") UUID commentId);
+
+    @Query("""
+        SELECT c.id
+        FROM Comment c
+        WHERE c.article.id = :articleId
+    """)
+    List<UUID> findIdsByArticleId(@Param("articleId") UUID articleId);
+
+    void deleteAllByArticle_Id(UUID articleId);
 }

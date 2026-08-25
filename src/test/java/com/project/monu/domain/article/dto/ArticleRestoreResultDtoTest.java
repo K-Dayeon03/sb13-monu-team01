@@ -1,5 +1,6 @@
 package com.project.monu.domain.article.dto;
 
+import com.project.monu.domain.article.dto.response.ArticleRestoreResultDto;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;

@@ -1,5 +1,6 @@
 package com.project.monu.domain.article.dto;
 
+import com.project.monu.domain.article.dto.response.ArticleViewDto;
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.entity.ArticleSource;
 import com.project.monu.domain.article.entity.ArticleView;

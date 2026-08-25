@@ -1,9 +1,10 @@
 package com.project.monu.domain.article.controller;
 
-import com.project.monu.domain.article.dto.ArticleDto;
+import com.project.monu.domain.article.dto.response.ArticleDto;
 import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
 import com.project.monu.domain.article.dto.request.ArticleSortType;
 import com.project.monu.domain.article.service.ArticleService;
+import com.project.monu.global.constant.RequestHeaders;
 import com.project.monu.global.dto.CursorPageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -48,7 +49,7 @@ public class ArticleController {
 
             // 나중에는 SecurityContext에서 현재 로그인 사용자 ID를 꺼내도록 교체하면 됩니다.
             // 인증 연동 전까지 클라이언트가 전달한 요청 사용자 ID로 viewedByMe를 계산합니다.
-            @RequestHeader("MoNew-Request-User-ID") UUID userId
+            @RequestHeader(RequestHeaders.REQUEST_USER_ID) UUID userId
     ) {
         ArticleSearchCondition condition = new ArticleSearchCondition(
                 keyword,
@@ -69,8 +70,15 @@ public class ArticleController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void softDelete(@PathVariable UUID articleId,
                            // API 요청 사용자 식별 규약에 따라 필수 헤더를 받습니다.
-                           @RequestHeader("MoNew-Request-User-ID") UUID userId) {
+                           @RequestHeader(RequestHeaders.REQUEST_USER_ID) UUID userId) {
         articleService.softDelete(articleId);
+    }
+
+    @DeleteMapping("/{articleId}/hard")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void hardDelete(@PathVariable UUID articleId,
+                           @RequestHeader(RequestHeaders.REQUEST_USER_ID) UUID userId) {
+        articleService.hardDelete(articleId);
     }
 
     @GetMapping("/sources")
@@ -80,7 +88,7 @@ public class ArticleController {
 
     @GetMapping("/{articleId}")
     public ArticleDto getArticle(@PathVariable UUID articleId,
-                                 @RequestHeader("Monew-Request-User-ID") UUID userId) {
+                                 @RequestHeader(RequestHeaders.REQUEST_USER_ID) UUID userId) {
         return articleService.getArticle(articleId, userId);
     }
 

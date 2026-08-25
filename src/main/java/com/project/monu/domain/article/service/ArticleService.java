@@ -1,13 +1,20 @@
 package com.project.monu.domain.article.service;
 
-import com.project.monu.domain.article.dto.ArticleDto;
+import com.project.monu.domain.article.dto.response.ArticleDto;
 import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
 import com.project.monu.domain.article.dto.request.ArticleSortType;
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.entity.ArticleSource;
+import com.project.monu.domain.article.entity.ArticleView;
+import com.project.monu.domain.article.repository.ArticleInterestRepository;
 import com.project.monu.domain.article.repository.ArticleRepository;
 import com.project.monu.domain.article.repository.ArticleSourceRepository;
 import com.project.monu.domain.article.repository.ArticleViewRepository;
+import com.project.monu.domain.comment.repository.CommentLikeRepository;
+import com.project.monu.domain.comment.repository.CommentRepository;
+import com.project.monu.domain.notification.entity.NotificationResourceType;
+import com.project.monu.domain.notification.repository.NotificationRepository;
+import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.dto.CursorPageResponse;
 import com.project.monu.global.exception.BusinessException;
@@ -30,6 +37,10 @@ public class ArticleService {
     private final ArticleRepository articleRepository;
     private final ArticleSourceRepository  articleSourceRepository;
     private final ArticleViewRepository articleViewRepository;
+    private final ArticleInterestRepository articleInterestRepository;
+    private final CommentRepository commentRepository;
+    private final CommentLikeRepository commentLikeRepository;
+    private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
 
     public CursorPageResponse<ArticleDto> getArticles(
@@ -143,24 +154,51 @@ public class ArticleService {
         article.softDelete();
     }
 
+    @Transactional
+    public void hardDelete(UUID articleId) {
+        Article article = articleRepository.findById(articleId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND));
+
+        List<UUID> commentIds = commentRepository.findIdsByArticleId(articleId);
+
+        // FK가 걸린 하위 데이터부터 지워야 마지막 Article 삭제가 안전합니다.
+        if (!commentIds.isEmpty()) {
+            commentLikeRepository.deleteAllByComment_IdIn(commentIds);
+            notificationRepository.deleteAllByResourceTypeAndResourceIdIn(
+                    NotificationResourceType.COMMENT,
+                    commentIds
+            );
+        }
+        commentRepository.deleteAllByArticle_Id(articleId);
+        articleInterestRepository.deleteAllByArticle_Id(articleId);
+        articleViewRepository.deleteAllByArticle_Id(articleId);
+        articleRepository.delete(article);
+    }
+
     public List<String> getSources() {
         return articleSourceRepository.findAllByEnabledTrue().stream()
                 .map(ArticleSource::getName)
                 .toList();
     }
 
+    @Transactional
     public ArticleDto getArticle(UUID articleId, UUID userId) {
-        if (userId == null || !userRepository.existsByIdAndDeletedAtIsNull(userId)) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
+        User user = findActiveUser(userId);
 
         Article article = articleRepository
                 .findByIdAndDeletedAtIsNull(articleId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND));
 
-        boolean viewedByMe = articleViewRepository
-                .findViewedArticleIds(userId, List.of(articleId))
-                .contains(articleId);
+        boolean viewedByMe = articleViewRepository.existsByViewerIdAndArticleId(userId, articleId);
+
+        if (!viewedByMe) {
+            articleViewRepository.save(ArticleView.builder()
+                    .viewer(user)
+                    .article(article)
+                    .build());
+            article.increaseViewCount();
+            viewedByMe = true;
+        }
 
         return new ArticleDto(
                 article.getId(),
@@ -173,6 +211,15 @@ public class ArticleService {
                 article.getViewCount(),
                 viewedByMe
         );
+    }
+
+    private User findActiveUser(UUID userId) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        return userRepository.findByIdAndDeletedAtIsNull(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
 }
