@@ -241,4 +241,27 @@ class UserServiceTest {
         .isInstanceOf(BusinessException.class)
         .hasMessage("사용자 정보 수정 권한이 없습니다.");
   }
+
+  // 논리 삭제
+  @Test
+  void 사용자가_자신의_계정을_논리_삭제할_수_있다() {
+    UUID userId = UUID.randomUUID();
+
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("테스트")
+        .password("encoded-password")
+        .build();
+
+    when(userRepository.findById(userId))
+        .thenReturn(Optional.of(user));
+
+    when(userRepository.save(user))
+        .thenReturn(user);
+
+    userService.delete(userId, userId);
+
+    assertThat(user.getDeletedAt()).isNotNull();
+    verify(userRepository).save(user);
+  }
 }

@@ -81,4 +81,7 @@ public class UserService {
 
     return UserResponse.from(updatedUser);
   }
+
+  public void delete(UUID userId, UUID requestUserId) {
+  }
 }
