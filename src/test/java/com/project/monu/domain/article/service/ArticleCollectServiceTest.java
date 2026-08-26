@@ -2,6 +2,7 @@ package com.project.monu.domain.article.service;
 
 import com.project.monu.domain.article.collector.KeywordMatcher;
 import com.project.monu.domain.article.collector.dto.CollectedArticle;
+import com.project.monu.domain.article.collector.exception.RssCollectException;
 import com.project.monu.domain.article.collector.naver.NaverCollector;
 import com.project.monu.domain.article.collector.rss.RssCollector;
 import com.project.monu.domain.article.entity.ArticleSource;
@@ -11,6 +12,7 @@ import com.project.monu.domain.article.repository.ArticleRepository;
 import com.project.monu.domain.article.repository.ArticleSourceRepository;
 import com.project.monu.domain.interest.repository.KeywordRepository;
 import jakarta.persistence.EntityManager;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +25,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -152,7 +155,7 @@ class ArticleCollectServiceTest {
         given(articleSourceRepository.findAll()).willReturn(List.of(failSource, okSource));
         given(keywordRepository.findAllWithInterest()).willReturn(List.of());
         given(rssCollector.collect(failSource.getSourceUrl()))
-                .willThrow(new RuntimeException("RSS 실패"));
+                .willThrow(new RssCollectException("RSS 실패", new RuntimeException("연결 실패")));
         given(rssCollector.collect(okSource.getSourceUrl()))
                 .willReturn(List.of(article("제목", "https://example.com/ok")));
         given(keywordMatcher.findMatchedInterests(any(), any()))
@@ -165,5 +168,28 @@ class ArticleCollectServiceTest {
         // then
         assertThat(saved).isEqualTo(1);
         verify(articleRepository, times(1)).save(any());
+    }
+
+    @Test
+    @DisplayName("예상하지 못한 시스템 오류는 다시 던진다.")
+    void 예상하지_못한_시스템_오류는_다시_던진다() {
+        // given
+        ArticleSource source = rssSource("ERROR");
+
+        given(articleSourceRepository.findAll())
+                .willReturn(List.of(source));
+
+        given(keywordRepository.findAllWithInterest())
+                .willReturn(List.of());
+
+        RuntimeException systemException =
+                new RuntimeException("DB 또는 시스템 오류");
+
+        given(rssCollector.collect(source.getSourceUrl()))
+                .willThrow(systemException);
+
+        // when & then
+        assertThatThrownBy(articleCollectService::collectAll)
+                .isSameAs(systemException);
     }
 }
