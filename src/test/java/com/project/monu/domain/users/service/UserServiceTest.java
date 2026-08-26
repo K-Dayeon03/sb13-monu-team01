@@ -264,4 +264,30 @@ class UserServiceTest {
     assertThat(user.getDeletedAt()).isNotNull();
     verify(userRepository).save(user);
   }
+
+  @Test
+  void 존재하지_않는_사용자는_삭제할_수_없다() {
+    UUID userId = UUID.randomUUID();
+
+    when(userRepository.findById(userId))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+        () -> userService.delete(userId, userId)
+    )
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("사용자를 찾을 수 없습니다.");
+  }
+
+  @Test
+  void 다른_사용자의_계정은_삭제할_수_없다() {
+    UUID userId = UUID.randomUUID();
+    UUID requestUserId = UUID.randomUUID();
+
+    assertThatThrownBy(
+        () -> userService.delete(userId, requestUserId)
+    )
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("사용자 삭제 권한이 없습니다.");
+  }
 }

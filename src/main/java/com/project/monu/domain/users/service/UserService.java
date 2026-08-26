@@ -83,5 +83,16 @@ public class UserService {
   }
 
   public void delete(UUID userId, UUID requestUserId) {
+
+    if (!userId.equals(requestUserId)) {
+      throw new BusinessException(ErrorCode.USER_UPDATE_ACCESS_DENIED);
+    }
+
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+    user.delete();
+
+    userRepository.save(user);
   }
 }

@@ -47,4 +47,15 @@ public class UserController {
 
     return userService.update(userId, requester, request);
   }
+
+  @DeleteMapping("/{userId}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void delete(
+      @PathVariable UUID userId,
+      @RequestHeader(value = USER_ID_HEADER, required = false) UUID requestUserId
+  ) {
+    UUID requester = requestUserId != null ? requestUserId : userId;
+
+    userService.delete(userId, requester);
+  }
 }
