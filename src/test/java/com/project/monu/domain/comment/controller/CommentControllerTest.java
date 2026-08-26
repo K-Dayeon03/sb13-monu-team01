@@ -1,6 +1,7 @@
 package com.project.monu.domain.comment.controller;
 
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -46,8 +47,7 @@ class CommentControllerTest {
         UUID articleId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
 
-        CommentCreateRequest request =
-                new CommentCreateRequest(articleId, userId, "댓글 등록 테스트입니다.");
+        CommentCreateRequest request = new CommentCreateRequest(articleId, userId, "댓글 등록 테스트입니다.");
 
         CommentDto response = new CommentDto(
                 commentId,
@@ -188,6 +188,8 @@ class CommentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(commentService);
     }
 
     @Test
@@ -202,5 +204,7 @@ class CommentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(commentService);
     }
 }

@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -47,7 +48,7 @@ class CommentRepositoryCustomImplTest {
 
         em.flush();
 
-        List<UUID> expectedIds = List.of(first, second, third).stream()
+        List<UUID> expectedIds = Stream.of(first, second, third)
                 .sorted(Comparator.comparing(Comment::getCreatedAt).reversed()
                         .thenComparing(Comment::getId, Comparator.reverseOrder()))
                 .map(Comment::getId)
@@ -213,7 +214,7 @@ class CommentRepositoryCustomImplTest {
 
         em.flush();
 
-        List<Comment> sorted = List.of(first, second, third).stream()
+        List<Comment> sorted = Stream.of(first, second, third)
                 .sorted(Comparator.comparing(Comment::getCreatedAt).reversed()
                         .thenComparing(Comment::getId, Comparator.reverseOrder()))
                 .toList();
@@ -304,7 +305,6 @@ class CommentRepositoryCustomImplTest {
                 .nickname(nickname)
                 .password("encoded-password")
                 .build();
-
         em.persist(user);
         return user;
     }
@@ -315,7 +315,6 @@ class CommentRepositoryCustomImplTest {
                 .type(SourceType.RSS)
                 .sourceUrl("https://example.com/" + name)
                 .build();
-
         em.persist(source);
         return source;
     }
@@ -328,21 +327,18 @@ class CommentRepositoryCustomImplTest {
                 .publishDate(Instant.parse("2026-08-18T00:00:00Z"))
                 .summary("summary")
                 .build();
-
         em.persist(article);
         return article;
     }
 
     private Comment comment(Article article, User user, String content) {
         Comment comment = new Comment(article, user, content);
-
         em.persist(comment);
         return comment;
     }
 
     private CommentLike commentLike(Comment comment, User likedBy) {
         CommentLike commentLike = new CommentLike(comment, likedBy);
-
         em.persist(commentLike);
         return commentLike;
     }

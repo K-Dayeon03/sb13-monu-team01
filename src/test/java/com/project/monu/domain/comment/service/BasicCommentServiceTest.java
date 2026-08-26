@@ -62,14 +62,13 @@ class BasicCommentServiceTest {
         UUID commentId = UUID.randomUUID();
         Instant createdAt = Instant.parse("2026-08-24T00:00:00Z");
 
-        CommentCreateRequest request =
-                new CommentCreateRequest(articleId, userId, "댓글 등록 테스트입니다.");
+        CommentCreateRequest request = new CommentCreateRequest(articleId, userId, "댓글 등록 테스트입니다.");
 
         Article article = mock(Article.class);
         User user = mock(User.class);
         Comment savedComment = mock(Comment.class);
 
-        when(articleRepository.findById(articleId)).thenReturn(Optional.of(article));
+        when(articleRepository.findByIdAndDeletedAtIsNull(articleId)).thenReturn(Optional.of(article));
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(commentRepository.save(any(Comment.class))).thenReturn(savedComment);
         when(article.getId()).thenReturn(articleId);
@@ -92,7 +91,7 @@ class BasicCommentServiceTest {
         assertThat(result.likedByMe()).isFalse();
         assertThat(result.createdAt()).isEqualTo(createdAt);
 
-        verify(articleRepository).findById(articleId);
+        verify(articleRepository).findByIdAndDeletedAtIsNull(articleId);
         verify(userRepository).findById(userId);
         verify(commentRepository).save(any(Comment.class));
     }
@@ -102,16 +101,13 @@ class BasicCommentServiceTest {
         // given
         UUID articleId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
-        CommentCreateRequest request =
-                new CommentCreateRequest(articleId, userId, "댓글 등록 테스트입니다.");
+        CommentCreateRequest request = new CommentCreateRequest(articleId, userId, "댓글 등록 테스트입니다.");
 
-        when(articleRepository.findById(articleId)).thenReturn(Optional.empty());
+        when(articleRepository.findByIdAndDeletedAtIsNull(articleId)).thenReturn(Optional.empty());
 
         // when
-        BusinessException exception = catchThrowableOfType(
-                () -> commentService.create(request),
-                BusinessException.class
-        );
+        BusinessException exception = catchThrowableOfType(BusinessException.class,
+                () -> commentService.create(request));
 
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ARTICLE_NOT_FOUND);
@@ -122,19 +118,16 @@ class BasicCommentServiceTest {
         // given
         UUID articleId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
-        CommentCreateRequest request =
-                new CommentCreateRequest(articleId, userId, "댓글 등록 테스트입니다.");
+        CommentCreateRequest request = new CommentCreateRequest(articleId, userId, "댓글 등록 테스트입니다.");
 
         Article article = mock(Article.class);
 
-        when(articleRepository.findById(articleId)).thenReturn(Optional.of(article));
+        when(articleRepository.findByIdAndDeletedAtIsNull(articleId)).thenReturn(Optional.of(article));
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
         // when
-        BusinessException exception = catchThrowableOfType(
-                () -> commentService.create(request),
-                BusinessException.class
-        );
+        BusinessException exception = catchThrowableOfType(BusinessException.class,
+                () -> commentService.create(request));
 
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
@@ -186,10 +179,8 @@ class BasicCommentServiceTest {
         when(commentRepository.findById(commentId)).thenReturn(Optional.empty());
 
         // when
-        BusinessException exception = catchThrowableOfType(
-                () -> commentService.update(commentId, userId, request),
-                BusinessException.class
-        );
+        BusinessException exception = catchThrowableOfType(BusinessException.class,
+                () -> commentService.update(commentId, userId, request));
 
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_NOT_FOUND);
@@ -211,10 +202,8 @@ class BasicCommentServiceTest {
         when(user.getId()).thenReturn(writerId);
 
         // when
-        BusinessException exception = catchThrowableOfType(
-                () -> commentService.update(commentId, requestUserId, request),
-                BusinessException.class
-        );
+        BusinessException exception = catchThrowableOfType(BusinessException.class,
+                () -> commentService.update(commentId, requestUserId, request));
 
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_ACCESS_DENIED);
@@ -250,10 +239,8 @@ class BasicCommentServiceTest {
         when(commentRepository.findById(commentId)).thenReturn(Optional.empty());
 
         // when
-        BusinessException exception = catchThrowableOfType(
-                () -> commentService.delete(commentId, userId),
-                BusinessException.class
-        );
+        BusinessException exception = catchThrowableOfType(BusinessException.class,
+                () -> commentService.delete(commentId, userId));
 
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_NOT_FOUND);
@@ -274,10 +261,8 @@ class BasicCommentServiceTest {
         when(user.getId()).thenReturn(writerId);
 
         // when
-        BusinessException exception = catchThrowableOfType(
-                () -> commentService.delete(commentId, requestUserId),
-                BusinessException.class
-        );
+        BusinessException exception = catchThrowableOfType(BusinessException.class,
+                () -> commentService.delete(commentId, requestUserId));
 
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_ACCESS_DENIED);
@@ -297,10 +282,8 @@ class BasicCommentServiceTest {
         when(comment.getDeletedAt()).thenReturn(Instant.now());
 
         // when
-        BusinessException exception = catchThrowableOfType(
-                () -> commentService.update(commentId, userId, request),
-                BusinessException.class
-        );
+        BusinessException exception = catchThrowableOfType(BusinessException.class,
+                () -> commentService.update(commentId, userId, request));
 
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_NOT_FOUND);
@@ -343,9 +326,8 @@ class BasicCommentServiceTest {
         when(user.getNickname()).thenReturn("댓글테스터");
 
         // when
-        CursorPageResponse<CommentDto> result = commentService.getComments(
-                articleId, "createdAt", "DESC", null,
-                null, 10, requestUserId);
+        CursorPageResponse<CommentDto> result =
+                commentService.getComments(articleId, "createdAt", "DESC", null, null, 10, requestUserId);
 
         // then
         assertThat(result.content()).hasSize(1);
@@ -379,12 +361,8 @@ class BasicCommentServiceTest {
 
         UUID firstId = UUID.randomUUID();
         UUID secondId = UUID.randomUUID();
-        UUID thirdId = UUID.randomUUID();
-
         Instant firstCreatedAt = Instant.parse("2026-08-24T03:00:00Z");
         Instant secondCreatedAt = Instant.parse("2026-08-24T02:00:00Z");
-        Instant thirdCreatedAt = Instant.parse("2026-08-24T01:00:00Z");
-
         CommentSearchCondition condition = new CommentSearchCondition(
                 articleId,
                 CommentSortType.CREATED_AT,
@@ -419,9 +397,8 @@ class BasicCommentServiceTest {
         when(second.getCreatedAt()).thenReturn(secondCreatedAt);
 
         // when
-        CursorPageResponse<CommentDto> result = commentService.getComments(
-                articleId, "createdAt", "DESC", null,
-                null, 2, requestUserId);
+        CursorPageResponse<CommentDto> result =
+                commentService.getComments(articleId, "createdAt", "DESC", null, null, 2, requestUserId);
 
         // then
         assertThat(result.content()).hasSize(2);
@@ -468,9 +445,8 @@ class BasicCommentServiceTest {
         when(user.getNickname()).thenReturn("댓글테스터");
 
         // when
-        CursorPageResponse<CommentDto> result = commentService.getComments(
-                articleId, "likeCount", "DESC", null,
-                null, 10, requestUserId);
+        CursorPageResponse<CommentDto> result =
+                commentService.getComments(articleId, "likeCount", "DESC", null, null, 10, requestUserId);
 
         // then
         assertThat(result.content().get(0).likeCount()).isEqualTo(3L);
@@ -484,12 +460,8 @@ class BasicCommentServiceTest {
         UUID requestUserId = UUID.randomUUID();
 
         // when
-        BusinessException exception = catchThrowableOfType(
-                () -> commentService.getComments(
-                        null, "wrong", "DESC", null,
-                        null, 10, requestUserId),
-                BusinessException.class
-        );
+        BusinessException exception = catchThrowableOfType(BusinessException.class,
+                () -> commentService.getComments(null, "wrong", "DESC", null, null, 10, requestUserId));
 
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_INVALID_SORT_TYPE);
@@ -501,11 +473,8 @@ class BasicCommentServiceTest {
         UUID requestUserId = UUID.randomUUID();
 
         // when
-        BusinessException exception = catchThrowableOfType(
-                () -> commentService.getComments(null, "createdAt",
-                        "WRONG", null, null, 10, requestUserId),
-                BusinessException.class
-        );
+        BusinessException exception = catchThrowableOfType(BusinessException.class,
+                () -> commentService.getComments(null, "createdAt", "WRONG", null, null, 10, requestUserId));
 
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_INVALID_SORT_DIRECTION);
@@ -517,12 +486,8 @@ class BasicCommentServiceTest {
         UUID requestUserId = UUID.randomUUID();
 
         // when
-        BusinessException exception = catchThrowableOfType(
-                () -> commentService.getComments(
-                        null, "createdAt", "DESC", null,
-                        null, 0, requestUserId),
-                BusinessException.class
-        );
+        BusinessException exception = catchThrowableOfType(BusinessException.class,
+                () -> commentService.getComments(null, "createdAt", "DESC", null, null, 0, requestUserId));
 
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_INVALID_LIMIT);
