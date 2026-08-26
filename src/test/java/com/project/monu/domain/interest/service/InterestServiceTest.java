@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -157,7 +158,7 @@ class InterestServiceTest {
 
         when(interestRepository.findById(interest.getId())).thenReturn(Optional.of(interest));
         when(subscriptionRepository.existsByUserIdAndInterest_Id(userId, interest.getId())).thenReturn(false);
-        when(subscriptionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(subscriptionRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         // when
         SubscriptionDto result = interestService.subscribe(userId, interest.getId());
@@ -166,7 +167,28 @@ class InterestServiceTest {
         assertThat(result.interestId()).isEqualTo(interest.getId());
         assertThat(result.interestName()).isEqualTo("인공지능");
         assertThat(interest.getSubscriberCount()).isEqualTo(1L);
-        verify(subscriptionRepository).save(any());
+        verify(subscriptionRepository).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("동시 요청으로 구독 유니크 제약을 위반하면 이미 구독 중 예외로 변환된다")
+    void subscribe_throwsSubscriptionAlreadyExists_whenUniqueConstraintViolated() {
+        // given
+        // existsBy 체크는 통과했지만(동시 요청 레이스 컨디션 상황을 재현), 실제 insert 시점에
+        // DB 유니크 제약(uk_subscription_user_interest)에 걸려 DataIntegrityViolationException이 발생하는 케이스
+        UUID userId = UUID.randomUUID();
+        Interest interest = Interest.create("인공지능");
+        ReflectionTestUtils.setField(interest, "id", UUID.randomUUID());
+
+        when(interestRepository.findById(interest.getId())).thenReturn(Optional.of(interest));
+        when(subscriptionRepository.existsByUserIdAndInterest_Id(userId, interest.getId())).thenReturn(false);
+        when(subscriptionRepository.saveAndFlush(any()))
+                .thenThrow(new DataIntegrityViolationException("uk_subscription_user_interest violation"));
+
+        // when & then
+        assertThatThrownBy(() -> interestService.subscribe(userId, interest.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("이미 구독 중인 관심사입니다.");
     }
 
     @Test
