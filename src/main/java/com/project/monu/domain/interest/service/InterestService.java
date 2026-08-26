@@ -1,5 +1,6 @@
 package com.project.monu.domain.interest.service;
 
+import com.project.monu.domain.article.repository.ArticleInterestRepository;
 import com.project.monu.domain.interest.dto.request.InterestRegisterRequest;
 import com.project.monu.domain.interest.dto.request.InterestSearchCondition;
 import com.project.monu.domain.interest.dto.request.InterestSortType;
@@ -15,6 +16,7 @@ import com.project.monu.domain.interest.util.InterestSimilarityCalculator;
 import com.project.monu.global.dto.CursorPageResponse;
 import com.project.monu.global.exception.BusinessException;
 import com.project.monu.global.exception.ErrorCode;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,10 +33,12 @@ public class InterestService {
 
     private final InterestRepository interestRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final ArticleInterestRepository articleInterestRepository;
 
-    public InterestService(InterestRepository interestRepository, SubscriptionRepository subscriptionRepository) {
+    public InterestService(InterestRepository interestRepository, SubscriptionRepository subscriptionRepository, ArticleInterestRepository articleInterestRepository) {
         this.interestRepository = interestRepository;
         this.subscriptionRepository = subscriptionRepository;
+        this.articleInterestRepository = articleInterestRepository;
     }
 
     @Transactional
@@ -70,6 +74,7 @@ public class InterestService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND));
 
         subscriptionRepository.deleteAllByInterest_Id(interestId);
+        articleInterestRepository.deleteAllByInterest_Id(interestId);
         interestRepository.delete(interest);
     }
 
@@ -129,7 +134,15 @@ public class InterestService {
         }
 
         Subscription subscription = Subscription.create(userId, interest);
-        Subscription saved = subscriptionRepository.save(subscription);
+        Subscription saved;
+        try {
+            // 동시에 같은 사용자가 구독 요청을 중복으로 보내면 위의 existsBy 체크를 둘 다 통과할 수 있어서,
+            // DB 유니크 제약(uk_subscription_user_interest)이 최종 방어선 역할을 한다.
+            // saveAndFlush로 즉시 flush해야 이 시점에 제약 위반이 터져서 여기서 잡을 수 있다.
+            saved = subscriptionRepository.saveAndFlush(subscription);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.SUBSCRIPTION_ALREADY_EXISTS);
+        }
         interest.increaseSubscriberCount();
 
         return toSubscriptionDto(saved);

@@ -3,6 +3,7 @@ package com.project.monu.domain.article.service;
 import com.project.monu.domain.article.dto.response.ArticleDto;
 import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
 import com.project.monu.domain.article.dto.request.ArticleSortType;
+import com.project.monu.domain.article.dto.response.ArticleViewDto;
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.entity.ArticleSource;
 import com.project.monu.domain.article.entity.ArticleView;
@@ -183,24 +184,19 @@ public class ArticleService {
                 .toList();
     }
 
-    @Transactional
     public ArticleDto getArticle(UUID articleId, UUID userId) {
-        User user = findActiveUser(userId);
+        findActiveUser(userId);
 
         Article article = articleRepository
                 .findByIdAndDeletedAtIsNull(articleId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND));
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.ARTICLE_NOT_FOUND));
 
-        boolean viewedByMe = articleViewRepository.existsByViewerIdAndArticleId(userId, articleId);
-
-        if (!viewedByMe) {
-            articleViewRepository.save(ArticleView.builder()
-                    .viewer(user)
-                    .article(article)
-                    .build());
-            article.increaseViewCount();
-            viewedByMe = true;
-        }
+        boolean viewedByMe =
+                articleViewRepository.existsByViewerIdAndArticleId(
+                        userId,
+                        articleId
+                );
 
         return new ArticleDto(
                 article.getId(),
@@ -222,6 +218,37 @@ public class ArticleService {
 
         return userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    @Transactional
+    public ArticleViewDto registerView(UUID articleId, UUID userId) {
+        User user = findActiveUser(userId);
+
+        Article article = articleRepository
+                .findByIdAndDeletedAtIsNull(articleId)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.ARTICLE_NOT_FOUND));
+
+        ArticleView existingView =
+                articleViewRepository.findByViewerIdAndArticleId(
+                        userId,
+                        articleId
+                ).orElse(null);
+        if (existingView != null) {
+            return ArticleViewDto.from(existingView);
+        }
+
+        article.increaseViewCount();
+
+        ArticleView articleView = ArticleView.builder()
+                .viewer(user)
+                .article(article)
+                .build();
+
+        ArticleView savedView =
+                articleViewRepository.save(articleView);
+
+        return ArticleViewDto.from(savedView);
     }
 
 }
