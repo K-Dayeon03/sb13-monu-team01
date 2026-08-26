@@ -58,6 +58,33 @@ class ArticleViewRepositoryTest {
         assertThat(result).doesNotContain(article2.getId());
     }
 
+    @Test
+    void 사용자의_기사_조회_이력_존재_여부를_확인한다() {
+        // given
+        User user = user("viewer@test.com", "viewer");
+        ArticleSource source = source("HANKYUNG");
+        Article viewedArticle = article(source, "viewed-article");
+        Article notViewedArticle = article(source, "not-viewed-article");
+
+        articleView(user, viewedArticle);
+
+        flushAndClear();
+
+        // when
+        boolean viewed = articleViewRepository.existsByViewerIdAndArticleId(
+                user.getId(),
+                viewedArticle.getId()
+        );
+        boolean notViewed = articleViewRepository.existsByViewerIdAndArticleId(
+                user.getId(),
+                notViewedArticle.getId()
+        );
+
+        // then
+        assertThat(viewed).isTrue();
+        assertThat(notViewed).isFalse();
+    }
+
     private User user(String email, String nickname) {
         User user = User.builder()
                 .email(email)

@@ -1,5 +1,6 @@
 package com.project.monu.domain.article.backup;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -13,6 +14,11 @@ import java.nio.file.Path;
  * S3 저장소 클래스를 추가해서 교체하면 됩니다.
  */
 @Component
+@ConditionalOnProperty(
+        name = "article.backup.storage",
+        havingValue = "local",
+        matchIfMissing = true
+)
 public class LocalArticleBackupStorage implements ArticleBackupStorage {
 
     // 실제 저장 위치는 프로젝트 실행 경로 기준 backups/ 아래입니다.
@@ -43,5 +49,10 @@ public class LocalArticleBackupStorage implements ArticleBackupStorage {
     @Override
     public boolean exists(String key) {
         return Files.exists(ROOT_PATH.resolve(key));
+    }
+
+    @Override
+    public String storageName() {
+        return "local";
     }
 }

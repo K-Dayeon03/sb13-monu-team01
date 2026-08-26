@@ -45,6 +45,9 @@ dependencies {
 
     // rome RSS 파싱 라이브러리
     implementation 'com.rometools:rome:2.1.0'
+    // AWS S3
+    implementation platform('software.amazon.awssdk:bom:2.54.1')
+    implementation 'software.amazon.awssdk:s3'
 
     // Actuator
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
@@ -63,6 +66,9 @@ dependencies {
 
     // Password Encryption
     implementation 'org.springframework.security:spring-security-crypto'
+
+    // Swagger
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0'
 }
 
 tasks.named('test') {

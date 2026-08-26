@@ -40,7 +40,7 @@ public class BasicCommentService implements CommentService {
     @Override
     public CommentDto create(CommentCreateRequest request) {
 
-        Article article = articleRepository.findById(request.articleId())
+        Article article = articleRepository.findByIdAndDeletedAtIsNull(request.articleId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.ARTICLE_NOT_FOUND));
 
         User user = userRepository.findById(request.userId())
@@ -49,6 +49,7 @@ public class BasicCommentService implements CommentService {
         Comment comment = new Comment(article, user, request.content());
 
         Comment savedComment = commentRepository.save(comment);
+        article.increaseCommentCount();
 
         return new CommentDto(
                 savedComment.getId(),
@@ -93,7 +94,9 @@ public class BasicCommentService implements CommentService {
             throw new BusinessException(ErrorCode.COMMENT_ACCESS_DENIED);
         }
 
+        // 댓글 목록에서는 숨기되 관련 이력은 유지하고, 기사 정렬용 댓글 수만 동기화합니다.
         comment.delete();
+        comment.getArticle().decreaseCommentCount();
     }
 
     @Override
@@ -189,7 +192,6 @@ public class BasicCommentService implements CommentService {
                 hasNext
         );
     }
-
 
     // 댓글 단건 조회
     private Comment getActiveComment(UUID commentId) {

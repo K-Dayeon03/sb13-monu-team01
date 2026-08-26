@@ -94,6 +94,7 @@ class BasicCommentServiceTest {
         verify(articleRepository).findByIdAndDeletedAtIsNull(articleId);
         verify(userRepository).findById(userId);
         verify(commentRepository).save(any(Comment.class));
+        verify(article).increaseCommentCount();
     }
 
     @Test
@@ -217,10 +218,12 @@ class BasicCommentServiceTest {
         UUID userId = UUID.randomUUID();
 
         Comment comment = mock(Comment.class);
+        Article article = mock(Article.class);
         User user = mock(User.class);
 
         when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
         when(comment.getUser()).thenReturn(user);
+        when(comment.getArticle()).thenReturn(article);
         when(user.getId()).thenReturn(userId);
 
         // when
@@ -228,6 +231,7 @@ class BasicCommentServiceTest {
 
         // then
         verify(comment).delete();
+        verify(article).decreaseCommentCount();
     }
 
     @Test

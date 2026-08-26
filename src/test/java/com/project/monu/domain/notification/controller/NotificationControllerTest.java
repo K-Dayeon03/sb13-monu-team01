@@ -23,7 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(NotificationController.class)
 class NotificationControllerTest {
 
-    private static final String REQUEST_USER_ID_HEADER = "Monew-Request-User-ID";
+    private static final String REQUEST_USER_ID_HEADER = "MoNew-Request-User-ID";
 
     @Autowired
     private MockMvc mockMvc;

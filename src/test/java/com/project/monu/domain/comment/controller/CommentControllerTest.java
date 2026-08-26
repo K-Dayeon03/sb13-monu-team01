@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.project.monu.global.constant.RequestHeaders;
 import com.project.monu.domain.comment.dto.CommentDto;
 import com.project.monu.domain.comment.dto.request.CommentCreateRequest;
 import com.project.monu.domain.comment.dto.request.CommentUpdateRequest;
@@ -28,8 +29,6 @@ import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(CommentController.class)
 class CommentControllerTest {
-
-    private static final String REQUEST_USER_ID_HEADER = "Monew-Request-User-ID";
 
     @Autowired
     private MockMvc mockMvc;
@@ -109,7 +108,7 @@ class CommentControllerTest {
                         .param("orderBy", "createdAt")
                         .param("direction", "DESC")
                         .param("limit", "10")
-                        .header(REQUEST_USER_ID_HEADER, requestUserId.toString()))
+                        .header(RequestHeaders.REQUEST_USER_ID, requestUserId.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(commentId.toString()))
                 .andExpect(jsonPath("$.content[0].articleId").value(articleId.toString()))
@@ -151,7 +150,7 @@ class CommentControllerTest {
 
         // when & then
         mockMvc.perform(patch("/api/comments/{commentId}", commentId)
-                        .header(REQUEST_USER_ID_HEADER, userId.toString())
+                        .header(RequestHeaders.REQUEST_USER_ID, userId.toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -171,7 +170,7 @@ class CommentControllerTest {
 
         // when & then
         mockMvc.perform(delete("/api/comments/{commentId}", commentId)
-                        .header(REQUEST_USER_ID_HEADER, userId.toString()))
+                        .header(RequestHeaders.REQUEST_USER_ID, userId.toString()))
                 .andExpect(status().isNoContent());
 
         verify(commentService).delete(commentId, userId);

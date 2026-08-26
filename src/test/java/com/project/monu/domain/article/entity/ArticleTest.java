@@ -34,4 +34,57 @@ class ArticleTest {
         assertThat(article.isDeleted()).isTrue();
     }
 
+    @Test
+    @DisplayName("조회수를 1 증가시킨다")
+    void 조회수를_증가시킨다() {
+        // given
+        Article article = createArticle();
+
+        // when
+        article.increaseViewCount();
+
+        // then
+        assertThat(article.getViewCount()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("댓글수를 1 증가시킨다")
+    void 댓글수를_증가시킨다() {
+        // given
+        Article article = createArticle();
+
+        // when
+        article.increaseCommentCount();
+
+        // then
+        assertThat(article.getCommentCount()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("댓글수를 1 감소시킨다")
+    void 댓글수를_감소시킨다() {
+        // given
+        Article article = createArticle();
+        article.increaseCommentCount();
+
+        // when
+        article.decreaseCommentCount();
+
+        // then
+        assertThat(article.getCommentCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("댓글수는 0보다 작아지지 않는다")
+    void 댓글수는_음수가_되지_않는다() {
+        // given
+        Article article = createArticle();
+
+        // when
+        article.decreaseCommentCount();
+
+        // then
+        assertThat(article.getCommentCount()).isZero();
+    }
+
 }

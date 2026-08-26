@@ -104,7 +104,7 @@ class InterestControllerTest {
                         .param("orderBy", "subscriberCount")
                         .param("direction", "DESC")
                         .param("limit", "10")
-                        .header("Monew-Request-User-ID", UUID.randomUUID().toString()))
+                        .header("MoNew-Request-User-ID", UUID.randomUUID().toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].name").value("인공지능"))
                 .andExpect(jsonPath("$.hasNext").value(false));
@@ -118,7 +118,7 @@ class InterestControllerTest {
                         .param("orderBy", "invalid")
                         .param("direction", "DESC")
                         .param("limit", "10")
-                        .header("Monew-Request-User-ID", UUID.randomUUID().toString()))
+                        .header("MoNew-Request-User-ID", UUID.randomUUID().toString()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -135,7 +135,7 @@ class InterestControllerTest {
 
         // when & then
         mockMvc.perform(post("/api/interests/{interestId}/subscriptions", interestId)
-                        .header("Monew-Request-User-ID", userId.toString()))
+                        .header("MoNew-Request-User-ID", userId.toString()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.interestName").value("인공지능"));
     }
@@ -149,7 +149,7 @@ class InterestControllerTest {
 
         // when & then
         mockMvc.perform(delete("/api/interests/{interestId}/subscriptions", interestId)
-                        .header("Monew-Request-User-ID", userId.toString()))
+                        .header("MoNew-Request-User-ID", userId.toString()))
                 .andExpect(status().isOk());
 
         verify(interestService).unsubscribe(userId, interestId);

@@ -36,6 +36,10 @@ batch:
     # 수동 테스트 중에는 스케줄러가 자동으로 돌지 않게 꺼둡니다.
     enabled: false
 
+article:
+  backup:
+    storage: local
+
 naver:
   api:
     # 백업 배치만 테스트할 때는 실제 Naver API 키가 필요 없어서 기본 테스트 값을 둡니다.

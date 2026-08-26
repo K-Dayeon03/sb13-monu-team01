@@ -1,4 +1,4 @@
-package com.project.monu.domain.article.dto;
+package com.project.monu.domain.article.dto.response;
 
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.entity.ArticleView;
