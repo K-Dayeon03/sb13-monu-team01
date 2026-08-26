@@ -21,6 +21,9 @@ public class Interest extends BaseEntity {
     @Column(nullable = false)
     private Long subscriberCount = 0L;
 
+    @Version
+    private Long version;
+
     @OneToMany(mappedBy = "interest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Keyword> keywords = new ArrayList<>();
 
