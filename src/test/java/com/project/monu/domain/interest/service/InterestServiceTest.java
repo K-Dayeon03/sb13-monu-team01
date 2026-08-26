@@ -21,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -159,6 +160,7 @@ class InterestServiceTest {
         when(interestRepository.findById(interest.getId())).thenReturn(Optional.of(interest));
         when(subscriptionRepository.existsByUserIdAndInterest_Id(userId, interest.getId())).thenReturn(false);
         when(subscriptionRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(interestRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         // when
         SubscriptionDto result = interestService.subscribe(userId, interest.getId());
@@ -168,6 +170,7 @@ class InterestServiceTest {
         assertThat(result.interestName()).isEqualTo("인공지능");
         assertThat(interest.getSubscriberCount()).isEqualTo(1L);
         verify(subscriptionRepository).saveAndFlush(any());
+        verify(interestRepository).saveAndFlush(interest);
     }
 
     @Test
@@ -189,6 +192,28 @@ class InterestServiceTest {
         assertThatThrownBy(() -> interestService.subscribe(userId, interest.getId()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage("이미 구독 중인 관심사입니다.");
+    }
+
+    @Test
+    @DisplayName("구독자 수 갱신 중 낙관적 락 충돌이 발생하면 동시 요청 예외로 변환된다")
+    void subscribe_throwsInterestConcurrentUpdate_whenOptimisticLockConflict() {
+        // given
+        // 다른 트랜잭션이 먼저 subscriberCount를 갱신해 Interest의 @Version이 바뀐 상태에서
+        // saveAndFlush를 호출하면 ObjectOptimisticLockingFailureException이 발생하는 케이스
+        UUID userId = UUID.randomUUID();
+        Interest interest = Interest.create("인공지능");
+        ReflectionTestUtils.setField(interest, "id", UUID.randomUUID());
+
+        when(interestRepository.findById(interest.getId())).thenReturn(Optional.of(interest));
+        when(subscriptionRepository.existsByUserIdAndInterest_Id(userId, interest.getId())).thenReturn(false);
+        when(subscriptionRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(interestRepository.saveAndFlush(any()))
+                .thenThrow(new ObjectOptimisticLockingFailureException(Interest.class, interest.getId()));
+
+        // when & then
+        assertThatThrownBy(() -> interestService.subscribe(userId, interest.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("다른 요청과 동시에 처리되어 반영에 실패했습니다. 다시 시도해주세요.");
     }
 
     @Test
@@ -284,6 +309,7 @@ class InterestServiceTest {
 
         when(subscriptionRepository.findByUserIdAndInterest_Id(userId, interest.getId()))
                 .thenReturn(Optional.of(subscription));
+        when(interestRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         // when
         interestService.unsubscribe(userId, interest.getId());
@@ -291,6 +317,28 @@ class InterestServiceTest {
         // then
         assertThat(interest.getSubscriberCount()).isEqualTo(0L);
         verify(subscriptionRepository).delete(subscription);
+        verify(interestRepository).saveAndFlush(interest);
+    }
+
+    @Test
+    @DisplayName("구독취소로 구독자 수 갱신 중 낙관적 락 충돌이 발생하면 동시 요청 예외로 변환된다")
+    void unsubscribe_throwsInterestConcurrentUpdate_whenOptimisticLockConflict() {
+        // given
+        UUID userId = UUID.randomUUID();
+        Interest interest = Interest.create("인공지능");
+        ReflectionTestUtils.setField(interest, "id", UUID.randomUUID());
+        interest.increaseSubscriberCount();
+        Subscription subscription = Subscription.create(userId, interest);
+
+        when(subscriptionRepository.findByUserIdAndInterest_Id(userId, interest.getId()))
+                .thenReturn(Optional.of(subscription));
+        when(interestRepository.saveAndFlush(any()))
+                .thenThrow(new ObjectOptimisticLockingFailureException(Interest.class, interest.getId()));
+
+        // when & then
+        assertThatThrownBy(() -> interestService.unsubscribe(userId, interest.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("다른 요청과 동시에 처리되어 반영에 실패했습니다. 다시 시도해주세요.");
     }
 
     @Test
