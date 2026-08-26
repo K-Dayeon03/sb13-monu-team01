@@ -2,6 +2,8 @@ package com.project.monu.domain.article.service;
 
 import com.project.monu.domain.article.collector.KeywordMatcher;
 import com.project.monu.domain.article.collector.dto.CollectedArticle;
+import com.project.monu.domain.article.collector.exception.ArticleCollectException;
+import com.project.monu.domain.article.collector.exception.NaverApiException;
 import com.project.monu.domain.article.collector.naver.NaverCollector;
 import com.project.monu.domain.article.collector.naver.dto.InterestKeywords;
 import com.project.monu.domain.article.collector.rss.RssCollector;
@@ -72,8 +74,27 @@ public class ArticleCollectService {
                         }
                     }
                 }
-            }catch (Exception e){
-                log.warn("출처 수집 실패: {} - {}", source.getName(), e.getMessage());
+            } catch (NaverApiException e){
+                log.warn("네이버 기사 수집 실패. source={}, status={}, errorCode={}, retryable={}",
+                        source.getName(),
+                        e.getStatusCode(),
+                        e.getErrorCode(),
+                        e.isRetryable(),
+                        e
+                        );
+            } catch (ArticleCollectException e) {
+                log.warn("기사 수집 실패. source={}, type={}",
+                        source.getName(),
+                        source.getType(),
+                        e
+                        );
+            } catch (Exception e) {
+                log.error("예상하지 못한 기사 수집 오류. source={}, type={}",
+                        source.getName(),
+                        source.getType(),
+                        e
+                );
+                throw e;
             }
         }
         log.info(">>> 수집 완료: {}건 저장", savedCount);

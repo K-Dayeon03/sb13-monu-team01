@@ -1,6 +1,7 @@
 package com.project.monu.domain.article.collector.naver;
 
 import com.project.monu.domain.article.collector.dto.CollectedArticle;
+import com.project.monu.domain.article.collector.exception.ArticleMappingException;
 import com.project.monu.domain.article.collector.naver.dto.NaverNewsResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.HtmlUtils;
@@ -33,10 +34,7 @@ public class NaverArticleMapper {
                     .parse(pubDate, DateTimeFormatter.RFC_1123_DATE_TIME)
                     .toInstant();
         }catch (DateTimeParseException e){
-            /**
-             * TODO: 커스텀 예외로 추후 변경 필요
-             */
-            throw new IllegalArgumentException("잘못된 pubDate 포맷: " + pubDate, e);
+            throw new ArticleMappingException("잘못된 pubDate 포맷: " + pubDate, e);
         }
     }
 }
