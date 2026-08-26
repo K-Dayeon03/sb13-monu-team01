@@ -4,7 +4,6 @@ import com.project.monu.domain.article.collector.exception.NaverApiException;
 import com.project.monu.domain.article.collector.exception.NaverNetworkException;
 import com.project.monu.domain.article.collector.exception.NaverResponseParseException;
 import com.project.monu.domain.article.collector.naver.dto.NaverNewsResponse;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
@@ -18,15 +17,14 @@ import org.springframework.web.client.RestClient;
 import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 class NaverNewsClientTest {
 
     private static final Logger log = LoggerFactory.getLogger(NaverNewsClientTest.class);
-
 
     @Test
     @EnabledIfSystemProperty(
@@ -36,7 +34,6 @@ class NaverNewsClientTest {
     )
     @DisplayName("네이버 뉴스 API를 실제로 호출해서 기사를 받아온다.")
     void 네이버_뉴스를_실제로_받아온다() {
-        // given - RestClient 직접 만들기
         String clientId = System.getenv("NAVER_CLIENT_ID");
         String clientSecret = System.getenv("NAVER_CLIENT_SECRET");
         assumeFalse(isBlank(clientId), "NAVER_CLIENT_ID 환경변수가 필요합니다.");
@@ -47,12 +44,12 @@ class NaverNewsClientTest {
                 .defaultHeader("X-NCP-APIGW-API-KEY-ID", clientId)
                 .defaultHeader("X-NCP-APIGW-API-KEY", clientSecret)
                 .build();
+
         ObjectMapper objectMapper = new ObjectMapper();
         NaverNewsClient client = new NaverNewsClient(restClient, objectMapper);
-        // when
+
         NaverNewsResponse response = client.search("유튜브");
 
-        // then
         assertThat(response).isNotNull();
         assertThat(response.items()).isNotEmpty();
 
@@ -64,15 +61,9 @@ class NaverNewsClientTest {
         });
     }
 
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
-}
-
     @Test
     @DisplayName("네이버 API가 SE02 오류를 응답하면 재시도 불가능한 API 예외를 던진다")
     void 네이버_API가_SE02를_응답하면_재시도_불가능한_예외를_던진다() {
-        // given
         RestClient.Builder builder = RestClient.builder()
                 .baseUrl("https://naver.test");
 
@@ -86,11 +77,11 @@ class NaverNewsClientTest {
                         withStatus(HttpStatus.BAD_REQUEST)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .body("""
-                                    {
-                                      "errorCode": "SE02",
-                                      "errorMessage": "Invalid display value"
-                                    }
-                                    """)
+                                        {
+                                          "errorCode": "SE02",
+                                          "errorMessage": "Invalid display value"
+                                        }
+                                        """)
                 );
 
         NaverNewsClient client = new NaverNewsClient(
@@ -98,8 +89,6 @@ class NaverNewsClientTest {
                 new ObjectMapper()
         );
 
-
-        // when & then
         assertThatThrownBy(() -> client.search("football"))
                 .isInstanceOfSatisfying(
                         NaverApiException.class,
@@ -119,7 +108,6 @@ class NaverNewsClientTest {
     @Test
     @DisplayName("네이버 API가 SE99 오류를 응답하면 재시도 가능한 API 예외를 던진다")
     void 네이버_API가_SE99를_응답하면_재시도_가능한_예외를_던진다() {
-        // given
         RestClient.Builder builder = RestClient.builder()
                 .baseUrl("https://naver.test");
 
@@ -133,11 +121,11 @@ class NaverNewsClientTest {
                         withStatus(HttpStatus.INTERNAL_SERVER_ERROR)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .body("""
-                                    {
-                                      "errorCode": "SE99",
-                                      "errorMessage": "System Error"
-                                    }
-                                    """)
+                                        {
+                                          "errorCode": "SE99",
+                                          "errorMessage": "System Error"
+                                        }
+                                        """)
                 );
 
         NaverNewsClient client = new NaverNewsClient(
@@ -145,7 +133,6 @@ class NaverNewsClientTest {
                 new ObjectMapper()
         );
 
-        // when & then
         assertThatThrownBy(() -> client.search("football"))
                 .isInstanceOfSatisfying(
                         NaverApiException.class,
@@ -165,12 +152,12 @@ class NaverNewsClientTest {
     @Test
     @DisplayName("네이버 API 호출 한도를 초과하면 재시도 불가능한 API 예외를 던진다.")
     void 네이버_API_호출_한도를_초과하면_재시도_불가능한_예외를_던진다() {
-        // given
         RestClient.Builder builder = RestClient.builder()
                 .baseUrl("https://naver.test");
 
         MockRestServiceServer server =
                 MockRestServiceServer.bindTo(builder).build();
+
         server.expect(queryParam("query", "football"))
                 .andExpect(queryParam("display", "100"))
                 .andExpect(queryParam("sort", "date"))
@@ -178,11 +165,11 @@ class NaverNewsClientTest {
                         withStatus(HttpStatus.TOO_MANY_REQUESTS)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .body("""
-                                    {
-                                      "errorCode": "429",
-                                      "errorMessage": "Rate limit exceeded"
-                                    }
-                                    """)
+                                        {
+                                          "errorCode": "429",
+                                          "errorMessage": "Rate limit exceeded"
+                                        }
+                                        """)
                 );
 
         NaverNewsClient client = new NaverNewsClient(
@@ -190,7 +177,6 @@ class NaverNewsClientTest {
                 new ObjectMapper()
         );
 
-        // when & then
         assertThatThrownBy(() -> client.search("football"))
                 .isInstanceOfSatisfying(
                         NaverApiException.class,
@@ -207,11 +193,9 @@ class NaverNewsClientTest {
         server.verify();
     }
 
-
     @Test
     @DisplayName("네이버 API의 정상 응답 JSON이 잘못되면 응답 파싱 예외를 던진다")
     void 네이버_API의_정상_응답_JSON이_잘못되면_응답_파싱_예외를_던진다() {
-        // given
         RestClient.Builder builder = RestClient.builder()
                 .baseUrl("https://naver.test");
 
@@ -223,7 +207,7 @@ class NaverNewsClientTest {
                 .andExpect(queryParam("sort", "date"))
                 .andRespond(
                         withStatus(HttpStatus.OK)
-                        .contentType(MediaType.APPLICATION_JSON)
+                                .contentType(MediaType.APPLICATION_JSON)
                                 .body("{ invalid-json }")
                 );
 
@@ -245,16 +229,14 @@ class NaverNewsClientTest {
         RestClient.Builder builder = RestClient.builder()
                 .baseUrl("https://naver.test");
 
-         MockRestServiceServer server =
-                 MockRestServiceServer.bindTo(builder).build();
+        MockRestServiceServer server =
+                MockRestServiceServer.bindTo(builder).build();
 
         server.expect(queryParam("query", "football"))
                 .andExpect(queryParam("display", "100"))
                 .andExpect(queryParam("sort", "date"))
                 .andRespond(request -> {
-                    throw new ResourceAccessException(
-                            "Connection timed out"
-                    );
+                    throw new ResourceAccessException("Connection timed out");
                 });
 
         NaverNewsClient client = new NaverNewsClient(
@@ -262,7 +244,6 @@ class NaverNewsClientTest {
                 new ObjectMapper()
         );
 
-        // when & then
         assertThatThrownBy(() -> client.search("football"))
                 .isInstanceOf(NaverNetworkException.class)
                 .hasMessageContaining("연결");
@@ -273,9 +254,9 @@ class NaverNewsClientTest {
     @Test
     @DisplayName("네이버 오류 응답을 파싱하지 못해도 HTTP 상태를 보존한다.")
     void 네이버_오류_응답을_파싱하지_못해도_HTTP_상태를_보존한다() {
-        // given
         RestClient.Builder builder = RestClient.builder()
                 .baseUrl("https://naver.test");
+
         MockRestServiceServer server =
                 MockRestServiceServer.bindTo(builder).build();
 
@@ -293,7 +274,6 @@ class NaverNewsClientTest {
                 new ObjectMapper()
         );
 
-        // when & then
         assertThatThrownBy(() -> client.search("football"))
                 .isInstanceOfSatisfying(
                         NaverApiException.class,
@@ -312,4 +292,7 @@ class NaverNewsClientTest {
         server.verify();
     }
 
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
 }
