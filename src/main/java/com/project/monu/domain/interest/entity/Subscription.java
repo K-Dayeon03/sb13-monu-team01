@@ -9,7 +9,12 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 @Entity
-@Table(name = "subscription")
+@Table(
+        name = "subscription",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_subscription_user_interest", columnNames = {"user_id", "interest_id"})
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Subscription extends BaseEntity {
