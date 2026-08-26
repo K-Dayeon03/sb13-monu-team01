@@ -85,7 +85,7 @@ public class UserService {
   public void delete(UUID userId, UUID requestUserId) {
 
     if (!userId.equals(requestUserId)) {
-      throw new BusinessException(ErrorCode.USER_UPDATE_ACCESS_DENIED);
+      throw new BusinessException(ErrorCode.USER_DELETE_ACCESS_DENIED);
     }
 
     User user = userRepository.findById(userId)

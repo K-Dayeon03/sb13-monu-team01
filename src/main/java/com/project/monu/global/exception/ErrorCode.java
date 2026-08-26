@@ -54,6 +54,12 @@ public enum ErrorCode {
         "사용자 정보 수정 권한이 없습니다."
   ),
 
+  USER_DELETE_ACCESS_DENIED(
+      HttpStatus.FORBIDDEN,
+      "USER_DELETE_ACCESS_DENIED",
+      "사용자 삭제 권한이 없습니다."
+  ),
+
   /*
    * 뉴스 기사 관리 - 기사 조회 및 삭제
    * 존재하지 않거나 이미 논리 삭제된 기사를 요청한 경우 사용합니다.
