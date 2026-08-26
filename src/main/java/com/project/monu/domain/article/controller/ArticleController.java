@@ -4,6 +4,7 @@ import com.project.monu.domain.article.dto.response.ArticleDto;
 import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
 import com.project.monu.domain.article.dto.request.ArticleSortType;
 import com.project.monu.domain.article.dto.response.ArticleRestoreResultDto;
+import com.project.monu.domain.article.dto.response.ArticleViewDto;
 import com.project.monu.domain.article.service.ArticleBackupService;
 import com.project.monu.domain.article.service.ArticleService;
 import com.project.monu.global.constant.RequestHeaders;
@@ -134,5 +135,14 @@ public class ArticleController {
                                  @RequestHeader(RequestHeaders.REQUEST_USER_ID) UUID userId) {
         return articleService.getArticle(articleId, userId);
     }
+
+    @PostMapping("/{articleId}/article-views")
+    public ArticleViewDto registerView(
+            @PathVariable UUID articleId,
+            @RequestHeader(RequestHeaders.REQUEST_USER_ID) UUID userId
+    ) {
+        return articleService.registerView(articleId, userId);
+    }
+
 
 }

@@ -1,12 +1,13 @@
 package com.project.monu.domain.article.collector.naver;
 
 import com.project.monu.domain.article.collector.dto.CollectedArticle;
+import com.project.monu.domain.article.collector.exception.ArticleMappingException;
 import com.project.monu.domain.article.collector.naver.dto.NaverNewsResponse;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -70,8 +71,10 @@ class NaverArticleMapperTest {
         );
 
         // when && then
-        assertThatThrownBy(() -> mapper.toCollectedArticle(item))
-                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(()-> mapper.toCollectedArticle(item))
+                .isInstanceOf(ArticleMappingException.class)
+                .hasMessageContaining("pubDate")
+                .hasCauseInstanceOf(DateTimeParseException.class);
     }
 
     @Test
