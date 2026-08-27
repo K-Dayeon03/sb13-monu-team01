@@ -4,10 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.repository.ArticleRepository;
@@ -553,5 +550,70 @@ class BasicCommentServiceTest {
         assertThat(result.commentCreatedAt()).isEqualTo(commentCreatedAt);
 
         verify(commentLikeRepository).save(any(CommentLike.class));
+    }
+
+    @Test
+    void 댓글이_없으면_좋아요_등록에_실패한다() {
+        // given
+        UUID commentId = UUID.randomUUID();
+        UUID requestUserId = UUID.randomUUID();
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.empty());
+
+        // when
+        BusinessException exception = catchThrowableOfType(
+                BusinessException.class,
+                () -> commentService.like(commentId, requestUserId)
+        );
+
+        // then
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_NOT_FOUND);
+        verifyNoInteractions(userRepository);
+        verifyNoInteractions(commentLikeRepository);
+    }
+
+    @Test
+    void 사용자가_없으면_좋아요_등록에_실패한다() {
+        // given
+        UUID commentId = UUID.randomUUID();
+        UUID requestUserId = UUID.randomUUID();
+
+        Comment comment = mock(Comment.class);
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        when(comment.getDeletedAt()).thenReturn(null);
+        when(userRepository.findById(requestUserId)).thenReturn(Optional.empty());
+
+        // when
+        BusinessException exception = catchThrowableOfType(BusinessException.class,
+                () -> commentService.like(commentId, requestUserId));
+
+        // then
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
+        verifyNoInteractions(commentLikeRepository);
+    }
+
+    @Test
+    void 이미_좋아요한_댓글이면_좋아요_등록에_실패한다() {
+        // given
+        UUID commentId = UUID.randomUUID();
+        UUID requestUserId = UUID.randomUUID();
+
+        Comment comment = mock(Comment.class);
+        User requestUser = mock(User.class);
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        when(comment.getDeletedAt()).thenReturn(null);
+        when(userRepository.findById(requestUserId)).thenReturn(Optional.of(requestUser));
+        when(commentLikeRepository.existsByComment_IdAndLikedBy_Id(commentId, requestUserId))
+                .thenReturn(true);
+
+        // when
+        BusinessException exception = catchThrowableOfType(BusinessException.class,
+                () -> commentService.like(commentId, requestUserId));
+
+        // then
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_LIKE_ALREADY_EXISTS);
+        verify(commentLikeRepository, never()).save(any(CommentLike.class));
     }
 }
