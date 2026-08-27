@@ -12,9 +12,37 @@ import java.net.URLConnection;
 @Component
 public class RssClient {
 
+    private static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 3_000;
+    private static final int DEFAULT_READ_TIMEOUT_MILLIS = 10_000;
+
+    private final RssConnectionFactory connectionFactory;
+    private final int connectTimeoutMillis;
+    private final int readTimeoutMillis;
+
+    public RssClient() {
+        this(
+                url -> new URL(url).openConnection(),
+                DEFAULT_CONNECT_TIMEOUT_MILLIS,
+                DEFAULT_READ_TIMEOUT_MILLIS
+        );
+    }
+
+    RssClient(
+            RssConnectionFactory connectionFactory,
+            int connectTimeoutMillis,
+            int readTimeoutMillis
+    ){
+        this.connectionFactory = connectionFactory;
+        this.connectTimeoutMillis = connectTimeoutMillis;
+        this.readTimeoutMillis = readTimeoutMillis;
+    }
+
     public SyndFeed fetch(String url) {
         try{
-            URLConnection connection = new URL(url).openConnection();
+            URLConnection connection = connectionFactory.open(url);
+
+            connection.setConnectTimeout(connectTimeoutMillis);
+            connection.setReadTimeout(readTimeoutMillis);
             connection.setRequestProperty(
                     "User-Agent", "Mozilla/5.0");
             return new SyndFeedInput()
