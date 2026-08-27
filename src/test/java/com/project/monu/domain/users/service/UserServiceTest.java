@@ -290,4 +290,27 @@ class UserServiceTest {
         .isInstanceOf(BusinessException.class)
         .hasMessage("사용자 삭제 권한이 없습니다.");
   }
+
+  @Test
+  void 논리_삭제된_사용자는_로그인할_수_없다() {
+    User user = User.builder()
+        .email("deleted@test.com")
+        .nickname("삭제사용자")
+        .password("encoded-password")
+        .build();
+
+    user.delete();
+
+    UserLoginRequest request = new UserLoginRequest(
+        "deleted@test.com",
+        "password123!"
+    );
+
+    when(userRepository.findByEmailAndDeletedAtIsNull(request.email()))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> userService.login(request))
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
+  }
 }

@@ -52,7 +52,7 @@ public class UserService {
 
   public UserResponse login(UserLoginRequest request) {
 
-    User user = userRepository.findByEmail(request.email())
+    User user = userRepository.findByEmailAndDeletedAtIsNull(request.email())
         .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
 
     if (!passwordEncoder.matches(request.password(), user.getPassword())) {
