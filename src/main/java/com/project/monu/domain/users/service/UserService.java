@@ -88,7 +88,7 @@ public class UserService {
       throw new BusinessException(ErrorCode.USER_DELETE_ACCESS_DENIED);
     }
 
-    User user = userRepository.findById(userId)
+    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
         .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
     user.delete();

@@ -313,4 +313,26 @@ class UserServiceTest {
         .isInstanceOf(BusinessException.class)
         .hasMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
   }
+
+  @Test
+  void 이미_논리_삭제된_사용자는_다시_삭제할_수_없다() {
+    UUID userId = UUID.randomUUID();
+
+    User user = User.builder()
+        .email("deleted@test.com")
+        .nickname("삭제사용자")
+        .password("encoded-password")
+        .build();
+
+    user.delete();
+
+    when(userRepository.findByIdAndDeletedAtIsNull(userId))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+        () -> userService.delete(userId, userId)
+    )
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("사용자를 찾을 수 없습니다.");
+  }
 }
