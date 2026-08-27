@@ -14,10 +14,9 @@ import com.project.monu.global.config.JpaAuditingConfig;
 import com.project.monu.global.config.QuerydslConfig;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -48,11 +47,15 @@ class CommentRepositoryCustomImplTest {
 
         em.flush();
 
-        List<UUID> expectedIds = Stream.of(first, second, third)
-                .sorted(Comparator.comparing(Comment::getCreatedAt).reversed()
-                        .thenComparing(Comment::getId, Comparator.reverseOrder()))
-                .map(Comment::getId)
-                .toList();
+        setCreatedAt(first, Instant.parse("2026-08-24T03:00:00Z"));
+        setCreatedAt(second, Instant.parse("2026-08-24T02:00:00Z"));
+        setCreatedAt(third, Instant.parse("2026-08-24T01:00:00Z"));
+
+        List<UUID> expectedIds = List.of(
+                first.getId(),
+                second.getId(),
+                third.getId()
+        );
 
         CommentSearchCondition condition = new CommentSearchCondition(
                 article.getId(),
@@ -212,19 +215,18 @@ class CommentRepositoryCustomImplTest {
         Comment second = comment(article, author, "댓글 2");
         Comment third = comment(article, author, "댓글 3");
 
+        Instant firstCreatedAt = Instant.parse("2026-08-24T03:00:00Z");
+        Instant secondCreatedAt = Instant.parse("2026-08-24T02:00:00Z");
+        Instant thirdCreatedAt = Instant.parse("2026-08-24T01:00:00Z");
+
         em.flush();
 
-        List<Comment> sorted = Stream.of(first, second, third)
-                .sorted(Comparator.comparing(Comment::getCreatedAt).reversed()
-                        .thenComparing(Comment::getId, Comparator.reverseOrder()))
-                .toList();
+        setCreatedAt(first, firstCreatedAt);
+        setCreatedAt(second, secondCreatedAt);
+        setCreatedAt(third, thirdCreatedAt);
 
-        Comment cursorComment = sorted.get(0);
-        List<UUID> expectedIds = sorted.subList(1, sorted.size()).stream()
-                .map(Comment::getId)
-                .toList();
-
-        String cursor = cursorComment.getCreatedAt() + "_" + cursorComment.getId();
+        String cursor = firstCreatedAt + "_" + first.getId();
+        List<UUID> expectedIds = List.of(second.getId(), third.getId());
 
         CommentSearchCondition condition = new CommentSearchCondition(
                 article.getId(),
@@ -346,5 +348,16 @@ class CommentRepositoryCustomImplTest {
     private void flushAndClear() {
         em.flush();
         em.clear();
+    }
+
+    private void setCreatedAt(Comment comment, Instant createdAt) {
+        em.createQuery("""
+            UPDATE Comment c
+            SET c.createdAt = ?1
+            WHERE c.id = ?2
+            """)
+                .setParameter(1, createdAt)
+                .setParameter(2, comment.getId())
+                .executeUpdate();
     }
 }
