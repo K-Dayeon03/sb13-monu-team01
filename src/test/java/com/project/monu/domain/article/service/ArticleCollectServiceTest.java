@@ -10,15 +10,20 @@ import com.project.monu.domain.article.entity.SourceType;
 import com.project.monu.domain.article.repository.ArticleInterestRepository;
 import com.project.monu.domain.article.repository.ArticleRepository;
 import com.project.monu.domain.article.repository.ArticleSourceRepository;
+import com.project.monu.domain.interest.entity.Interest;
 import com.project.monu.domain.interest.repository.KeywordRepository;
+import com.project.monu.domain.interest.repository.SubscriptionRepository;
+import com.project.monu.domain.notification.event.InterestArticleCreatedEvent;
 import jakarta.persistence.EntityManager;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.util.List;
@@ -51,6 +56,10 @@ class ArticleCollectServiceTest {
     private RssCollector rssCollector;
     @Mock
     private EntityManager entityManager;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private SubscriptionRepository subscriptionRepository;
 
     @InjectMocks
     private ArticleCollectService articleCollectService;
@@ -88,13 +97,20 @@ class ArticleCollectServiceTest {
     @DisplayName("매칭된 기사는 저장된다")
     void 매칭된_기사는_저장된다() {
         // given
+        UUID interestId = UUID.randomUUID();
+        Interest interest = Interest.create("테스트 관심사");
+
+        given(keywordMatcher.findMatchedInterests(any(), any()))
+                .willReturn(List.of(interestId));
+
+        given(entityManager.getReference(Interest.class, interestId))
+                .willReturn(interest);
+
         ArticleSource source = rssSource("YEONHAP");
         given(articleSourceRepository.findAll()).willReturn(List.of(source));
         given(keywordRepository.findAllWithInterest()).willReturn(List.of());
         given(rssCollector.collect(anyString()))
                 .willReturn(List.of(article("제목", "https://example.com/1")));
-        given(keywordMatcher.findMatchedInterests(any(), any()))
-                .willReturn(List.of(UUID.randomUUID()));
         given(articleRepository.existsBySourceUrl(anyString())).willReturn(false);
 
         // when
@@ -124,6 +140,8 @@ class ArticleCollectServiceTest {
     
         // then
         assertThat(saved).isZero();
+        verify(eventPublisher, never()).publishEvent(any());
+        verifyNoInteractions(subscriptionRepository);
         verify(articleRepository, never()).save(any());
     }
 
@@ -143,6 +161,8 @@ class ArticleCollectServiceTest {
 
         // then
         assertThat(saved).isZero();
+        verify(eventPublisher, never()).publishEvent(any());
+        verifyNoInteractions(subscriptionRepository);
         verify(articleRepository, never()).save(any());
     }
 
@@ -150,6 +170,15 @@ class ArticleCollectServiceTest {
     @DisplayName("한 출처가 실패해도 나머지 출처는 계속 수집한다")
     void 한_출처가_실패해도_나머지는_계속_수집한다() {
         // given
+        UUID interestId = UUID.randomUUID();
+        Interest interest = Interest.create("테스트 관심사");
+
+        given(keywordMatcher.findMatchedInterests(any(), any()))
+                .willReturn(List.of(interestId));
+
+        given(entityManager.getReference(Interest.class, interestId))
+                .willReturn(interest);
+
         ArticleSource failSource = rssSource("FAIL");
         ArticleSource okSource = rssSource("OK");
         given(articleSourceRepository.findAll()).willReturn(List.of(failSource, okSource));
@@ -158,8 +187,6 @@ class ArticleCollectServiceTest {
                 .willThrow(new RssCollectException("RSS 실패", new RuntimeException("연결 실패")));
         given(rssCollector.collect(okSource.getSourceUrl()))
                 .willReturn(List.of(article("제목", "https://example.com/ok")));
-        given(keywordMatcher.findMatchedInterests(any(), any()))
-                .willReturn(List.of(UUID.randomUUID()));
         given(articleRepository.existsBySourceUrl(anyString())).willReturn(false);
 
         // when
@@ -191,5 +218,120 @@ class ArticleCollectServiceTest {
         // when & then
         assertThatThrownBy(articleCollectService::collectAll)
                 .isSameAs(systemException);
+    }
+
+    @Test
+    @DisplayName("신규 기사가 저장되면 관심사 기사 생성 이벤트를 발행한다")
+    void 신규_기사가_저장되면_관심사_기사_생성_이벤트를_발행한다() {
+        // given
+        UUID interestId = UUID.randomUUID();
+        UUID subscriberId1 = UUID.randomUUID();
+        UUID subscriberId2 = UUID.randomUUID();
+
+        given(subscriptionRepository.findUserIdsByInterestId(interestId))
+                .willReturn(List.of(subscriberId1, subscriberId2));
+
+        ArticleSource source = rssSource("YEONHAP");
+        Interest interest = Interest.create("축구");
+
+        given(articleSourceRepository.findAll())
+                .willReturn(List.of(source));
+
+        given(keywordRepository.findAllWithInterest())
+                .willReturn(List.of());
+
+        given(rssCollector.collect(source.getSourceUrl()))
+                .willReturn(List.of(
+                        article("축구 기사", "https://example.com/football")));
+
+        given(keywordMatcher.findMatchedInterests(any(), any()))
+                .willReturn(List.of(interestId));
+
+        given(articleRepository.existsBySourceUrl(
+                "https://example.com/football"
+        )).willReturn(false);
+
+        given(entityManager.getReference(Interest.class, interestId))
+                .willReturn(interest);
+
+        // when
+        int savedCount = articleCollectService.collectAll();
+
+        // then
+        // then
+        assertThat(savedCount).isEqualTo(1);
+
+        ArgumentCaptor<Object> eventCaptor =
+                ArgumentCaptor.forClass(Object.class);
+
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+        assertThat(eventCaptor.getValue())
+                .isInstanceOf(InterestArticleCreatedEvent.class);
+
+        InterestArticleCreatedEvent event =
+                (InterestArticleCreatedEvent) eventCaptor.getValue();
+
+        assertThat(event.interestId()).isEqualTo(interestId);
+        assertThat(event.interestName()).isEqualTo("축구");
+        assertThat(event.articleCount()).isEqualTo(1);
+        assertThat(event.subscriberUserIds())
+                .containsExactly(subscriberId1, subscriberId2);
+
+    }
+
+    @Test
+    @DisplayName("같은 관심사의 신규 기사 여러 건은 하나의 이벤트로 집계한다.")
+    void 같은_관심사의_신규_기사_여러_건은_하나의_이벤트로_집계한다() {
+        UUID interestId = UUID.randomUUID();
+        UUID subscriberId = UUID.randomUUID();
+
+        ArticleSource source = rssSource("YEONHAP");
+        Interest interest = Interest.create("축구");
+
+        given(articleSourceRepository.findAll())
+                .willReturn(List.of(source));
+
+        given(keywordRepository.findAllWithInterest())
+                .willReturn(List.of());
+
+        given(rssCollector.collect(source.getSourceUrl()))
+                .willReturn(List.of(
+                        article("축구 기사 1", "https://example.com/football/1"),
+                        article("축구 기사 2", "https://example.com/football/2")
+                ));
+
+        given(keywordMatcher.findMatchedInterests(any(), any()))
+                .willReturn(List.of(interestId));
+
+        given(articleRepository.existsBySourceUrl(anyString()))
+                .willReturn(false);
+
+        given(entityManager.getReference(Interest.class, interestId))
+                .willReturn(interest);
+
+        given(subscriptionRepository.findUserIdsByInterestId(interestId))
+                .willReturn(List.of(subscriberId));
+
+        // when
+        int savedCount = articleCollectService.collectAll();
+
+        // then
+        assertThat(savedCount).isEqualTo(2);
+
+        ArgumentCaptor<Object> eventCaptor =
+                ArgumentCaptor.forClass(Object.class);
+
+        verify(eventPublisher, times(1))
+                .publishEvent(eventCaptor.capture());
+
+        InterestArticleCreatedEvent event =
+                (InterestArticleCreatedEvent) eventCaptor.getValue();
+
+        assertThat(event.interestId()).isEqualTo(interestId);
+        assertThat(event.interestName()).isEqualTo("축구");
+        assertThat(event.articleCount()).isEqualTo(2);
+        assertThat(event.subscriberUserIds())
+                .containsExactly(subscriberId);
     }
 }

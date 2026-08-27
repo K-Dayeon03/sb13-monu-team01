@@ -28,7 +28,7 @@ public class S3ArticleBackupStorage implements ArticleBackupStorage {
                 PutObjectRequest.builder()
                         .bucket(properties.bucket())
                         .key(key)
-                        .contentType("application/x-jsonlines")
+                        .contentType("application/x-ndjson")
                         .build(),
                 RequestBody.fromString(content)
         );

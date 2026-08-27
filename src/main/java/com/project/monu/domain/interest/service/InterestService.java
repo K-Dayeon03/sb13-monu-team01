@@ -16,6 +16,8 @@ import com.project.monu.domain.interest.util.InterestSimilarityCalculator;
 import com.project.monu.global.dto.CursorPageResponse;
 import com.project.monu.global.exception.BusinessException;
 import com.project.monu.global.exception.ErrorCode;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -133,8 +135,25 @@ public class InterestService {
         }
 
         Subscription subscription = Subscription.create(userId, interest);
-        Subscription saved = subscriptionRepository.save(subscription);
+        Subscription saved;
+        try {
+            // 동시에 같은 사용자가 구독 요청을 중복으로 보내면 위의 existsBy 체크를 둘 다 통과할 수 있어서,
+            // DB 유니크 제약(uk_subscription_user_interest)이 최종 방어선 역할을 한다.
+            // saveAndFlush로 즉시 flush해야 이 시점에 제약 위반이 터져서 여기서 잡을 수 있다.
+            saved = subscriptionRepository.saveAndFlush(subscription);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.SUBSCRIPTION_ALREADY_EXISTS);
+        }
+
         interest.increaseSubscriberCount();
+        try {
+            // subscriberCount는 여러 요청이 동시에 증감시킬 수 있는 값이라 단순 save로는 lost update가 날 수 있다.
+            // Interest에 @Version을 두고 saveAndFlush로 즉시 flush해서, 그 사이 다른 트랜잭션이 먼저
+            // 커밋했다면 여기서 ObjectOptimisticLockingFailureException으로 걸러낸다.
+            interestRepository.saveAndFlush(interest);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new BusinessException(ErrorCode.INTEREST_CONCURRENT_UPDATE);
+        }
 
         return toSubscriptionDto(saved);
     }
@@ -196,8 +215,14 @@ public class InterestService {
         Subscription subscription = subscriptionRepository.findByUserIdAndInterest_Id(userId, interestId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
 
+        Interest interest = subscription.getInterest();
         subscriptionRepository.delete(subscription);
-        subscription.getInterest().decreaseSubscriberCount();
+        interest.decreaseSubscriberCount();
+        try {
+            interestRepository.saveAndFlush(interest);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new BusinessException(ErrorCode.INTEREST_CONCURRENT_UPDATE);
+        }
     }
 
 }

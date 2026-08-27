@@ -16,13 +16,17 @@ import com.project.monu.domain.article.repository.ArticleRepository;
 import com.project.monu.domain.article.repository.ArticleSourceRepository;
 import com.project.monu.domain.interest.entity.Keyword;
 import com.project.monu.domain.interest.repository.KeywordRepository;
+import com.project.monu.domain.interest.repository.SubscriptionRepository;
+import com.project.monu.domain.notification.event.InterestArticleCreatedEvent;
 import jakarta.persistence.EntityManager;
 import com.project.monu.domain.interest.entity.Interest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -43,6 +47,8 @@ public class ArticleCollectService {
     private final NaverCollector naverCollector;
     private final RssCollector rssCollector;
     private final EntityManager entityManager;
+    private final ApplicationEventPublisher eventPublisher;
+    private final SubscriptionRepository subscriptionRepository;
 
     /**
      * 전체 API, RSS 출처를 순회하며 기사를 수집·저장한다.
@@ -52,6 +58,9 @@ public class ArticleCollectService {
         // 관심사 + 키워드는 한 번만 로드 (매 기사마다 조회 방지)
         List<InterestKeywords> interestKeywords = loadInterestKeywords();
         int savedCount = 0;
+
+        Map<UUID, Integer> articleCountByInterest = new HashMap<>();
+        Map<UUID, String> interestNameById =  new HashMap<>();
 
         List<ArticleSource> sources = articleSourceRepository.findAll();
 
@@ -64,13 +73,13 @@ public class ArticleCollectService {
                 if (source.getType() == SourceType.RSS) {
                     // ==== RSS 수집 ====
                     List<CollectedArticle> articles = rssCollector.collect(source.getSourceUrl());
-                    savedCount += processArticles(source, articles, interestKeywords);
+                    savedCount += processArticles(source, articles, interestKeywords, articleCountByInterest, interestNameById);
                 }else if (source.getType() == SourceType.API){
                     // ==== 네이버 API 수집: 관심사 키워드마다 검색 ====
                     for (InterestKeywords ik : interestKeywords) {
                         for (String keyword : ik.keywords()) {
                             List<CollectedArticle> articles = naverCollector.collect(keyword);
-                            savedCount += processArticles(source, articles, interestKeywords);
+                            savedCount += processArticles(source, articles, interestKeywords, articleCountByInterest, interestNameById);
                         }
                     }
                 }
@@ -97,13 +106,17 @@ public class ArticleCollectService {
                 throw e;
             }
         }
+        publishInterestArticleCreatedEvents(articleCountByInterest, interestNameById);
+
         log.info(">>> 수집 완료: {}건 저장", savedCount);
         return savedCount;
     }
 
     private int processArticles(ArticleSource source,
                                 List<CollectedArticle> articles,
-                                List<InterestKeywords> interestKeywords) {
+                                List<InterestKeywords> interestKeywords,
+                                Map<UUID, Integer> articleCountByInterest,
+                                Map<UUID, String> interestNameBtId) {
         int saved = 0;
         for (CollectedArticle article : articles) {
             List<UUID> matchedIds =
@@ -111,7 +124,7 @@ public class ArticleCollectService {
             if (matchedIds.isEmpty()) {
                 continue;
             }
-            if (saveWithSource(source, article, matchedIds)) {
+            if (saveWithSource(source, article, matchedIds, articleCountByInterest, interestNameBtId)) {
                 saved++;
             }
         }
@@ -137,7 +150,10 @@ public class ArticleCollectService {
      */
     private boolean saveWithSource(ArticleSource source,
                                    CollectedArticle article,
-                                   List<UUID> matchedInterestIds) {
+                                   List<UUID> matchedInterestIds,
+                                   Map<UUID, Integer> articleCountByInterest,
+                                   Map<UUID, String> interestNameById) {
+
         if (articleRepository.existsBySourceUrl(article.originalLink())) {
             return false;
         }
@@ -157,8 +173,32 @@ public class ArticleCollectService {
                     .article(newArticle)
                     .interest(interest)
                     .build();
+
             articleInterestRepository.save(articleInterest);
+
+            articleCountByInterest.merge(interestId, 1, Integer::sum);
+
+            interestNameById.putIfAbsent(interestId, interest.getName());
         }
         return true;
+    }
+
+    private void publishInterestArticleCreatedEvents(
+            Map<UUID, Integer> articleCountByInterest,
+            Map<UUID, String> interestNameById
+    ) {
+        articleCountByInterest.forEach((interestId, articleCount) -> {
+            List<UUID> subscriberUserIds =
+                    subscriptionRepository.findUserIdsByInterestId(interestId);
+
+            eventPublisher.publishEvent(
+                    new InterestArticleCreatedEvent(
+                            interestId,
+                            interestNameById.get(interestId),
+                            articleCount,
+                            subscriberUserIds
+                    )
+            );
+        });
     }
 }

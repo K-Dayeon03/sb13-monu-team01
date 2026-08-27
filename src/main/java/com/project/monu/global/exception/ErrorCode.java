@@ -109,6 +109,16 @@ public enum ErrorCode {
   ),
 
   /*
+   * 관심사 관리 - 구독/구독취소
+   * 동시 요청으로 인해 낙관적 락(버전) 충돌이 발생한 경우 사용합니다.
+   */
+  INTEREST_CONCURRENT_UPDATE(
+          HttpStatus.CONFLICT,
+          "INTEREST_CONCURRENT_UPDATE",
+          "다른 요청과 동시에 처리되어 반영에 실패했습니다. 다시 시도해주세요."
+  ),
+
+  /*
    * 댓글 관리 - 댓글 조회/수정/삭제
    * 존재하지 않거나 이미 삭제된 댓글을 조회하려는 경우 사용
    */
@@ -126,6 +136,46 @@ public enum ErrorCode {
           HttpStatus.FORBIDDEN,
         "COMMENT_ACCESS_DENIED",
         "댓글을 수정하거나 삭제할 권한이 없습니다."
+  ),
+
+  /*
+   * 댓글 관리 - 댓글 목록 조회
+   * 올바르지 않은 커서 값으로 조회를 시도한 경우 사용
+   */
+  COMMENT_INVALID_CURSOR(
+          HttpStatus.BAD_REQUEST,
+        "COMMENT_INVALID_CURSOR",
+                "올바르지 않은 댓글 커서입니다."
+  ),
+
+  /*
+   * 댓글 관리 - 댓글 목록 조회
+   * 지원하지 않는 정렬 기준으로 조회를 시도한 경우 사용
+   */
+  COMMENT_INVALID_SORT_TYPE(
+          HttpStatus.BAD_REQUEST,
+        "COMMENT_INVALID_SORT_TYPE",
+                "지원하지 않는 댓글 정렬 기준입니다."
+  ),
+
+  /*
+   * 댓글 관리 - 댓글 목록 조회
+   * 지원하지 않는 정렬 방향으로 조회를 시도한 경우 사용
+   */
+  COMMENT_INVALID_SORT_DIRECTION(
+          HttpStatus.BAD_REQUEST,
+        "COMMENT_INVALID_SORT_DIRECTION",
+                "지원하지 않는 댓글 정렬 방향입니다."
+  ),
+
+  /*
+   * 댓글 관리 - 댓글 목록 조회
+   * 올바르지 않은 조회 개수를 요청한 경우 사용
+   */
+  COMMENT_INVALID_LIMIT(
+          HttpStatus.BAD_REQUEST,
+        "COMMENT_INVALID_LIMIT",
+                "댓글 조회 개수는 1 이상이어야 합니다."
   );
 
   private final HttpStatus status;
