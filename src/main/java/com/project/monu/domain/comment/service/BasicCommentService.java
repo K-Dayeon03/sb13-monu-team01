@@ -9,6 +9,7 @@ import com.project.monu.domain.comment.dto.request.CommentSearchCondition;
 import com.project.monu.domain.comment.dto.request.CommentSortType;
 import com.project.monu.domain.comment.dto.request.CommentUpdateRequest;
 import com.project.monu.domain.comment.entity.Comment;
+import com.project.monu.domain.comment.entity.CommentLike;
 import com.project.monu.domain.comment.exception.InvalidCommentSortDirectionException;
 import com.project.monu.domain.comment.repository.CommentLikeRepository;
 import com.project.monu.domain.comment.repository.CommentQueryResult;
@@ -103,9 +104,31 @@ public class BasicCommentService implements CommentService {
     public void hardDelete(UUID commentId) {
     }
 
+    @Transactional
     @Override
     public CommentLikeDto like(UUID commentId, UUID requestUserId) {
-        return null;
+        Comment comment = getActiveComment(commentId);
+
+        User user = userRepository.findById(requestUserId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        CommentLike commentLike = new CommentLike(comment, user);
+        CommentLike savedLike = commentLikeRepository.save(commentLike);
+
+        long likeCount = commentLikeRepository.countByComment_Id(commentId);
+
+        return new CommentLikeDto(
+                savedLike.getId(),
+                requestUserId,
+                savedLike.getCreatedAt(),
+                comment.getId(),
+                comment.getArticle().getId(),
+                comment.getUser().getId(),
+                comment.getUser().getNickname(),
+                comment.getContent(),
+                likeCount,
+                comment.getCreatedAt()
+        );
     }
 
     @Override
