@@ -335,4 +335,23 @@ class UserServiceTest {
         .isInstanceOf(BusinessException.class)
         .hasMessage("사용자를 찾을 수 없습니다.");
   }
+
+  // 물리 삭제
+  @Test
+  void 강제_물리_삭제하면_사용자가_삭제된다() {
+    UUID userId = UUID.randomUUID();
+
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("테스트")
+        .password("encoded-password")
+        .build();
+
+    when(userRepository.findById(userId))
+        .thenReturn(Optional.of(user));
+
+    userService.hardDelete(userId);
+
+    verify(userRepository).delete(user);
+  }
 }

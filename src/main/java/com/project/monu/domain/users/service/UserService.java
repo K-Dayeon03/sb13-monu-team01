@@ -95,4 +95,12 @@ public class UserService {
 
     userRepository.save(user);
   }
+
+  public void hardDelete(UUID userId) {
+
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+    userRepository.delete(user);
+  }
 }
