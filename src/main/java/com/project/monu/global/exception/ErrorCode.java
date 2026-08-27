@@ -130,6 +130,46 @@ public enum ErrorCode {
           HttpStatus.FORBIDDEN,
         "COMMENT_ACCESS_DENIED",
         "댓글을 수정하거나 삭제할 권한이 없습니다."
+  ),
+
+  /*
+   * 댓글 관리 - 댓글 목록 조회
+   * 올바르지 않은 커서 값으로 조회를 시도한 경우 사용
+   */
+  COMMENT_INVALID_CURSOR(
+          HttpStatus.BAD_REQUEST,
+        "COMMENT_INVALID_CURSOR",
+                "올바르지 않은 댓글 커서입니다."
+  ),
+
+  /*
+   * 댓글 관리 - 댓글 목록 조회
+   * 지원하지 않는 정렬 기준으로 조회를 시도한 경우 사용
+   */
+  COMMENT_INVALID_SORT_TYPE(
+          HttpStatus.BAD_REQUEST,
+        "COMMENT_INVALID_SORT_TYPE",
+                "지원하지 않는 댓글 정렬 기준입니다."
+  ),
+
+  /*
+   * 댓글 관리 - 댓글 목록 조회
+   * 지원하지 않는 정렬 방향으로 조회를 시도한 경우 사용
+   */
+  COMMENT_INVALID_SORT_DIRECTION(
+          HttpStatus.BAD_REQUEST,
+        "COMMENT_INVALID_SORT_DIRECTION",
+                "지원하지 않는 댓글 정렬 방향입니다."
+  ),
+
+  /*
+   * 댓글 관리 - 댓글 목록 조회
+   * 올바르지 않은 조회 개수를 요청한 경우 사용
+   */
+  COMMENT_INVALID_LIMIT(
+          HttpStatus.BAD_REQUEST,
+        "COMMENT_INVALID_LIMIT",
+                "댓글 조회 개수는 1 이상이어야 합니다."
   );
 
   private final HttpStatus status;
