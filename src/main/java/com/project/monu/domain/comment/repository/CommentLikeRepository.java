@@ -9,4 +9,7 @@ import java.util.UUID;
 public interface CommentLikeRepository extends JpaRepository<CommentLike, UUID> {
 
     void deleteAllByComment_IdIn(List<UUID> commentIds);
+
+    long countByComment_Id(UUID commentId);
 }
+

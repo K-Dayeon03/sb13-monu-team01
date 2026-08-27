@@ -12,11 +12,13 @@ import static org.mockito.Mockito.when;
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.repository.ArticleRepository;
 import com.project.monu.domain.comment.dto.CommentDto;
+import com.project.monu.domain.comment.dto.CommentLikeDto;
 import com.project.monu.domain.comment.dto.request.CommentCreateRequest;
 import com.project.monu.domain.comment.dto.request.CommentSearchCondition;
 import com.project.monu.domain.comment.dto.request.CommentSortType;
 import com.project.monu.domain.comment.dto.request.CommentUpdateRequest;
 import com.project.monu.domain.comment.entity.Comment;
+import com.project.monu.domain.comment.entity.CommentLike;
 import com.project.monu.domain.comment.repository.CommentLikeRepository;
 import com.project.monu.domain.comment.repository.CommentQueryResult;
 import com.project.monu.domain.comment.repository.CommentRepository;
@@ -495,5 +497,61 @@ class BasicCommentServiceTest {
 
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_INVALID_LIMIT);
+    }
+
+    @Test
+    void 댓글에_좋아요를_등록한다() {
+        // given
+        UUID commentId = UUID.randomUUID();
+        UUID requestUserId = UUID.randomUUID();
+        UUID likeId = UUID.randomUUID();
+        UUID articleId = UUID.randomUUID();
+        UUID commentUserId = UUID.randomUUID();
+
+        Instant likeCreatedAt = Instant.parse("2026-08-27T06:00:00Z");
+        Instant commentCreatedAt = Instant.parse("2026-08-26T06:00:00Z");
+
+        Comment comment = mock(Comment.class);
+        User commentUser = mock(User.class);
+        User requestUser = mock(User.class);
+        Article article = mock(Article.class);
+        CommentLike savedLike = mock(CommentLike.class);
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        when(comment.getDeletedAt()).thenReturn(null);
+        when(userRepository.findById(requestUserId)).thenReturn(Optional.of(requestUser));
+
+        when(comment.getId()).thenReturn(commentId);
+        when(comment.getArticle()).thenReturn(article);
+        when(comment.getUser()).thenReturn(commentUser);
+        when(comment.getContent()).thenReturn("댓글 내용");
+        when(comment.getCreatedAt()).thenReturn(commentCreatedAt);
+
+        when(article.getId()).thenReturn(articleId);
+        when(commentUser.getId()).thenReturn(commentUserId);
+        when(commentUser.getNickname()).thenReturn("작성자");
+
+        when(savedLike.getId()).thenReturn(likeId);
+        when(savedLike.getCreatedAt()).thenReturn(likeCreatedAt);
+
+        when(commentLikeRepository.save(any(CommentLike.class))).thenReturn(savedLike);
+        when(commentLikeRepository.countByComment_Id(commentId)).thenReturn(1L);
+
+        // when
+        CommentLikeDto result = commentService.like(commentId, requestUserId);
+
+        // then
+        assertThat(result.id()).isEqualTo(likeId);
+        assertThat(result.likedBy()).isEqualTo(requestUserId);
+        assertThat(result.createdAt()).isEqualTo(likeCreatedAt);
+        assertThat(result.commentId()).isEqualTo(commentId);
+        assertThat(result.articleId()).isEqualTo(articleId);
+        assertThat(result.commentUserId()).isEqualTo(commentUserId);
+        assertThat(result.commentUserNickname()).isEqualTo("작성자");
+        assertThat(result.commentContent()).isEqualTo("댓글 내용");
+        assertThat(result.commentLikeCount()).isEqualTo(1L);
+        assertThat(result.commentCreatedAt()).isEqualTo(commentCreatedAt);
+
+        verify(commentLikeRepository).save(any(CommentLike.class));
     }
 }
