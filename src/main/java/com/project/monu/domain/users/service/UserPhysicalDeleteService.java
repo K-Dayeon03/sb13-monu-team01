@@ -24,5 +24,6 @@ public class UserPhysicalDeleteService {
 
   public void hardDelete(UUID userId) {
     articleViewRepository.deleteAllByViewer_Id(userId);
+    notificationRepository.deleteAllByUserId(userId);
   }
 }
