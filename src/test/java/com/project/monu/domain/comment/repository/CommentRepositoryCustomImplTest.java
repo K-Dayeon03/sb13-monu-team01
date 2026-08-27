@@ -273,7 +273,15 @@ class CommentRepositoryCustomImplTest {
 
         commentLike(oneLike, liker1);
 
+        Instant threeLikesCreatedAt = Instant.parse("2026-08-24T03:00:00Z");
+        Instant twoLikesCreatedAt = Instant.parse("2026-08-24T02:00:00Z");
+        Instant oneLikeCreatedAt = Instant.parse("2026-08-24T01:00:00Z");
+
         em.flush();
+
+        setCreatedAt(threeLikes, threeLikesCreatedAt);
+        setCreatedAt(twoLikes, twoLikesCreatedAt);
+        setCreatedAt(oneLike, oneLikeCreatedAt);
 
         String cursor = "3_" + threeLikes.getId();
 
@@ -282,7 +290,7 @@ class CommentRepositoryCustomImplTest {
                 CommentSortType.LIKE_COUNT,
                 Sort.Direction.DESC,
                 cursor,
-                threeLikes.getCreatedAt(),
+                threeLikesCreatedAt,
                 10,
                 requestUser.getId()
         );
