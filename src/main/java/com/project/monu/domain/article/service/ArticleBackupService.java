@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ArticleBackupService {
 
-    // 저장소 key는 로컬 파일 경로이면서, 나중에 S3 object key로도 그대로 사용할 수 있게 잡았습니다.
+    // 저장소 key는 로컬 파일 경로와 S3 object key에서 같은 규칙으로 사용합니다.
     private static final String BACKUP_PREFIX = "article-backups/";
 
     // 요구사항의 "날짜 단위"는 서비스 운영 시간대인 한국 시간 기준 하루로 해석합니다.
@@ -175,7 +175,6 @@ public class ArticleBackupService {
     }
 
     private String backupKey(LocalDate date) {
-        // 날짜별 백업 파일 위치를 한 곳에서 만들면, S3 전환 시에도 key 규칙을 유지하기 쉽습니다.
         return BACKUP_PREFIX + date + ".jsonl";
     }
 

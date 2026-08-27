@@ -9,9 +9,6 @@ import java.nio.file.Path;
 
 /**
  * 개발 환경에서 사용하는 로컬 파일 백업 저장소입니다.
- *
- * 실제 배포에서는 같은 ArticleBackupStorage 인터페이스를 구현하는
- * S3 저장소 클래스를 추가해서 교체하면 됩니다.
  */
 @Component
 @ConditionalOnProperty(
@@ -21,7 +18,7 @@ import java.nio.file.Path;
 )
 public class LocalArticleBackupStorage implements ArticleBackupStorage {
 
-    // 실제 저장 위치는 프로젝트 실행 경로 기준 backups/ 아래입니다.
+    // 저장 위치는 프로젝트 실행 경로 기준 backups/ 아래입니다.
     // 예: backups/article-backups/2026-08-21.jsonl
     private static final Path ROOT_PATH = Path.of("backups");
 
