@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.project.monu.domain.comment.dto.CommentLikeDto;
 import com.project.monu.global.constant.RequestHeaders;
 import com.project.monu.domain.comment.dto.CommentDto;
 import com.project.monu.domain.comment.dto.request.CommentCreateRequest;
@@ -205,5 +206,48 @@ class CommentControllerTest {
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(commentService);
+    }
+
+    @Test
+    void 댓글에_좋아요를_등록한다() throws Exception {
+        // given
+        UUID commentId = UUID.randomUUID();
+        UUID requestUserId = UUID.randomUUID();
+        UUID likeId = UUID.randomUUID();
+        UUID articleId = UUID.randomUUID();
+        UUID commentUserId = UUID.randomUUID();
+
+        Instant likeCreatedAt = Instant.parse("2026-08-27T06:00:00Z");
+        Instant commentCreatedAt = Instant.parse("2026-08-26T06:00:00Z");
+
+        CommentLikeDto response = new CommentLikeDto(
+                likeId,
+                requestUserId,
+                likeCreatedAt,
+                commentId,
+                articleId,
+                commentUserId,
+                "작성자",
+                "댓글 내용",
+                1L,
+                commentCreatedAt
+        );
+
+        when(commentService.like(commentId, requestUserId)).thenReturn(response);
+
+        // when & then
+        mockMvc.perform(post("/api/comments/{commentId}/comment-likes", commentId)
+                        .header(RequestHeaders.REQUEST_USER_ID, requestUserId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(likeId.toString()))
+                .andExpect(jsonPath("$.likedBy").value(requestUserId.toString()))
+                .andExpect(jsonPath("$.commentId").value(commentId.toString()))
+                .andExpect(jsonPath("$.articleId").value(articleId.toString()))
+                .andExpect(jsonPath("$.commentUserId").value(commentUserId.toString()))
+                .andExpect(jsonPath("$.commentUserNickname").value("작성자"))
+                .andExpect(jsonPath("$.commentContent").value("댓글 내용"))
+                .andExpect(jsonPath("$.commentLikeCount").value(1));
+
+        verify(commentService).like(commentId, requestUserId);
     }
 }
