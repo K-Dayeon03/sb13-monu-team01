@@ -27,7 +27,7 @@ public class ArticleCollectScheduler {
         this.articleCollectJob = articleCollectJob;
     }
 
-    @Scheduled(cron = "0 * * * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 * * * *", zone = "Asia/Seoul")
     public void runCollectJob() {
         try {
             // 같은 JobInstance 재실행 오류를 피하려고 스케줄 실행마다 timestamp를 새로 넣습니다.
