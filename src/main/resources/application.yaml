@@ -1,4 +1,9 @@
 spring:
+  mongodb:
+    uri: ${MONGODB_URI}
+    representation:
+      uuid: standard
+
   application:
     name: sb13-monu-team01
 
