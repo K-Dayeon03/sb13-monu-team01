@@ -139,7 +139,7 @@ public enum ErrorCode {
   COMMENT_INVALID_CURSOR(
           HttpStatus.BAD_REQUEST,
         "COMMENT_INVALID_CURSOR",
-                "올바르지 않은 댓글 커서입니다."
+        "올바르지 않은 댓글 커서입니다."
   ),
 
   /*
@@ -149,7 +149,7 @@ public enum ErrorCode {
   COMMENT_INVALID_SORT_TYPE(
           HttpStatus.BAD_REQUEST,
         "COMMENT_INVALID_SORT_TYPE",
-                "지원하지 않는 댓글 정렬 기준입니다."
+        "지원하지 않는 댓글 정렬 기준입니다."
   ),
 
   /*
@@ -159,7 +159,7 @@ public enum ErrorCode {
   COMMENT_INVALID_SORT_DIRECTION(
           HttpStatus.BAD_REQUEST,
         "COMMENT_INVALID_SORT_DIRECTION",
-                "지원하지 않는 댓글 정렬 방향입니다."
+        "지원하지 않는 댓글 정렬 방향입니다."
   ),
 
   /*
@@ -169,7 +169,27 @@ public enum ErrorCode {
   COMMENT_INVALID_LIMIT(
           HttpStatus.BAD_REQUEST,
         "COMMENT_INVALID_LIMIT",
-                "댓글 조회 개수는 1 이상이어야 합니다."
+        "댓글 조회 개수는 1 이상이어야 합니다."
+  ),
+
+  /*
+   * 댓글 관리 - 댓글 좋아요
+   * 이미 좋아요한 댓글에 다시 좋아요를 시도한 경우 사용
+   */
+  COMMENT_LIKE_ALREADY_EXISTS(
+          HttpStatus.CONFLICT,
+        "COMMENT_LIKE_DUPLICATION",
+        "이미 좋아요한 댓글입니다."
+  ),
+
+  /*
+   * 댓글 관리 - 댓글 좋아요
+   * 취소할 좋아요 정보가 존재하지 않는 경우 사용
+   */
+  COMMENT_LIKE_NOT_FOUND(
+          HttpStatus.NOT_FOUND,
+        "COMMENT_LIKE_NOT_FOUND",
+                "댓글 좋아요를 찾을 수 없습니다."
   );
 
   private final HttpStatus status;
