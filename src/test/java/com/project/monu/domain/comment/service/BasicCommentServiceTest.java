@@ -637,4 +637,27 @@ class BasicCommentServiceTest {
         // then
         verify(commentLikeRepository).delete(commentLike);
     }
+
+    @Test
+    void 좋아요하지_않은_댓글이면_좋아요_취소에_실패한다() {
+        // given
+        UUID commentId = UUID.randomUUID();
+        UUID requestUserId = UUID.randomUUID();
+
+        Comment comment = mock(Comment.class);
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        when(comment.getDeletedAt()).thenReturn(null);
+        when(commentLikeRepository.findByComment_IdAndLikedBy_Id(commentId, requestUserId))
+                .thenReturn(Optional.empty());
+
+        // when
+        BusinessException exception = catchThrowableOfType(
+                BusinessException.class,
+                () -> commentService.unlike(commentId, requestUserId)
+        );
+
+        // then
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_LIKE_NOT_FOUND);
+    }
 }

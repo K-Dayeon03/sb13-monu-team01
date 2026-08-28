@@ -136,8 +136,16 @@ public class BasicCommentService implements CommentService {
         );
     }
 
+    @Transactional
     @Override
     public void unlike(UUID commentId, UUID requestUserId) {
+        getActiveComment(commentId);
+
+        CommentLike commentLike = commentLikeRepository
+                .findByComment_IdAndLikedBy_Id(commentId, requestUserId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_LIKE_NOT_FOUND));
+
+        commentLikeRepository.delete(commentLike);
     }
 
     @Override

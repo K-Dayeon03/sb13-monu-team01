@@ -180,6 +180,16 @@ public enum ErrorCode {
           HttpStatus.CONFLICT,
         "COMMENT_LIKE_DUPLICATION",
         "이미 좋아요한 댓글입니다."
+  ),
+
+  /*
+   * 댓글 관리 - 댓글 좋아요
+   * 취소할 좋아요 정보가 존재하지 않는 경우 사용
+   */
+  COMMENT_LIKE_NOT_FOUND(
+          HttpStatus.NOT_FOUND,
+        "COMMENT_LIKE_NOT_FOUND",
+                "댓글 좋아요를 찾을 수 없습니다."
   );
 
   private final HttpStatus status;
