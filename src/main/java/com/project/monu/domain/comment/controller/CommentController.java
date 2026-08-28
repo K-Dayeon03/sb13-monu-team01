@@ -87,5 +87,14 @@ public class CommentController {
         return ResponseEntity.ok(commentLike);
     }
 
+    @DeleteMapping("/{commentId}/comment-likes")
+    public ResponseEntity<Void> unlike(
+            @PathVariable UUID commentId,
+            @RequestHeader(RequestHeaders.REQUEST_USER_ID) UUID requestUserId
+    ) {
+        commentService.unlike(commentId, requestUserId);
+        return ResponseEntity.ok().build();
+    }
+
 
 }

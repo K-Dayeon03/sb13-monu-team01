@@ -250,4 +250,18 @@ class CommentControllerTest {
 
         verify(commentService).like(commentId, requestUserId);
     }
+
+    @Test
+    void 댓글_좋아요를_취소한다() throws Exception {
+        // given
+        UUID commentId = UUID.randomUUID();
+        UUID requestUserId = UUID.randomUUID();
+
+        // when & then
+        mockMvc.perform(delete("/api/comments/{commentId}/comment-likes", commentId)
+                        .header(RequestHeaders.REQUEST_USER_ID, requestUserId.toString()))
+                .andExpect(status().isOk());
+
+        verify(commentService).unlike(commentId, requestUserId);
+    }
 }
