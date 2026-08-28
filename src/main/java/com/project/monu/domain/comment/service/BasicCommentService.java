@@ -9,6 +9,7 @@ import com.project.monu.domain.comment.dto.request.CommentSearchCondition;
 import com.project.monu.domain.comment.dto.request.CommentSortType;
 import com.project.monu.domain.comment.dto.request.CommentUpdateRequest;
 import com.project.monu.domain.comment.entity.Comment;
+import com.project.monu.domain.comment.entity.CommentLike;
 import com.project.monu.domain.comment.exception.InvalidCommentSortDirectionException;
 import com.project.monu.domain.comment.repository.CommentLikeRepository;
 import com.project.monu.domain.comment.repository.CommentQueryResult;
@@ -103,13 +104,48 @@ public class BasicCommentService implements CommentService {
     public void hardDelete(UUID commentId) {
     }
 
+    @Transactional
     @Override
     public CommentLikeDto like(UUID commentId, UUID requestUserId) {
-        return null;
+        Comment comment = getActiveComment(commentId);
+
+        User user = userRepository.findById(requestUserId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 중복검사
+        if (commentLikeRepository.existsByComment_IdAndLikedBy_Id(commentId, requestUserId)) {
+            throw new BusinessException(ErrorCode.COMMENT_LIKE_ALREADY_EXISTS);
+        }
+
+        CommentLike commentLike = new CommentLike(comment, user);
+        CommentLike savedLike = commentLikeRepository.save(commentLike);
+
+        long likeCount = commentLikeRepository.countByComment_Id(commentId);
+
+        return new CommentLikeDto(
+                savedLike.getId(),
+                requestUserId,
+                savedLike.getCreatedAt(),
+                comment.getId(),
+                comment.getArticle().getId(),
+                comment.getUser().getId(),
+                comment.getUser().getNickname(),
+                comment.getContent(),
+                likeCount,
+                comment.getCreatedAt()
+        );
     }
 
+    @Transactional
     @Override
     public void unlike(UUID commentId, UUID requestUserId) {
+        getActiveComment(commentId);
+
+        CommentLike commentLike = commentLikeRepository
+                .findByComment_IdAndLikedBy_Id(commentId, requestUserId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_LIKE_NOT_FOUND));
+
+        commentLikeRepository.delete(commentLike);
     }
 
     @Override
