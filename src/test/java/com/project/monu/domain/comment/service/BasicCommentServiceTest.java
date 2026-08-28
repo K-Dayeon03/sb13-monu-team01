@@ -616,4 +616,25 @@ class BasicCommentServiceTest {
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_LIKE_ALREADY_EXISTS);
         verify(commentLikeRepository, never()).save(any(CommentLike.class));
     }
+
+    @Test
+    void 댓글_좋아요를_취소한다() {
+        // given
+        UUID commentId = UUID.randomUUID();
+        UUID requestUserId = UUID.randomUUID();
+
+        Comment comment = mock(Comment.class);
+        CommentLike commentLike = mock(CommentLike.class);
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        when(comment.getDeletedAt()).thenReturn(null);
+        when(commentLikeRepository.findByComment_IdAndLikedBy_Id(commentId, requestUserId))
+                .thenReturn(Optional.of(commentLike));
+
+        // when
+        commentService.unlike(commentId, requestUserId);
+
+        // then
+        verify(commentLikeRepository).delete(commentLike);
+    }
 }
