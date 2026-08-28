@@ -1,7 +1,7 @@
 package com.project.monu.domain.article.backup;
 
 
-import com.project.monu.global.config.ArticleBackupProperties;
+import com.project.monu.global.config.AwsS3Properties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -20,7 +20,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 public class S3ArticleBackupStorage implements ArticleBackupStorage {
 
     private final S3Client s3Client;
-    private final ArticleBackupProperties properties;
+    private final AwsS3Properties properties;
 
     @Override
     public void save(String key, String content) {
