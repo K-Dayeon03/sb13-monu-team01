@@ -1,6 +1,7 @@
 package com.project.monu.domain.comment.controller;
 
 import com.project.monu.domain.comment.dto.CommentDto;
+import com.project.monu.domain.comment.dto.CommentLikeDto;
 import com.project.monu.domain.comment.dto.request.CommentCreateRequest;
 import com.project.monu.domain.comment.dto.request.CommentUpdateRequest;
 import com.project.monu.domain.comment.service.CommentService;
@@ -76,5 +77,15 @@ public class CommentController {
 
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{commentId}/comment-likes")
+    public ResponseEntity<CommentLikeDto> like(
+            @PathVariable UUID commentId,
+            @RequestHeader(RequestHeaders.REQUEST_USER_ID) UUID requestUserId
+    ) {
+        CommentLikeDto commentLike = commentService.like(commentId, requestUserId);
+        return ResponseEntity.ok(commentLike);
+    }
+
 
 }
