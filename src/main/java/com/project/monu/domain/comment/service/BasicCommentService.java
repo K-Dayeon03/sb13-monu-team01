@@ -112,6 +112,11 @@ public class BasicCommentService implements CommentService {
         User user = userRepository.findById(requestUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        // 중복검사
+        if (commentLikeRepository.existsByComment_IdAndLikedBy_Id(commentId, requestUserId)) {
+            throw new BusinessException(ErrorCode.COMMENT_LIKE_ALREADY_EXISTS);
+        }
+
         CommentLike commentLike = new CommentLike(comment, user);
         CommentLike savedLike = commentLikeRepository.save(commentLike);
 
