@@ -7,6 +7,7 @@ build/
 .DS_Store
 .env
 backups/
+logs/
 ### STS ###
 .apt_generated
 .classpath

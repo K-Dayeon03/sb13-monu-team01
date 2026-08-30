@@ -1,9 +1,11 @@
 package com.project.monu.domain.article.service;
 
 import com.project.monu.domain.article.collector.KeywordMatcher;
+import com.project.monu.domain.article.collector.RetrySleeper;
 import com.project.monu.domain.article.collector.dto.CollectedArticle;
 import com.project.monu.domain.article.collector.exception.ArticleCollectException;
 import com.project.monu.domain.article.collector.exception.NaverApiException;
+import com.project.monu.domain.article.collector.exception.NaverNetworkException;
 import com.project.monu.domain.article.collector.naver.NaverCollector;
 import com.project.monu.domain.article.collector.naver.dto.InterestKeywords;
 import com.project.monu.domain.article.collector.rss.RssCollector;
@@ -49,6 +51,10 @@ public class ArticleCollectService {
     private final EntityManager entityManager;
     private final ApplicationEventPublisher eventPublisher;
     private final SubscriptionRepository subscriptionRepository;
+    private final RetrySleeper retrySleeper;
+
+    private static final int NAVER_MAX_ATTEMPTS = 3;
+    private static final long NAVER_RETRY_BACKOFF_MILLIS = 1000L;
 
     /**
      * 전체 API, RSS 출처를 순회하며 기사를 수집·저장한다.
@@ -78,8 +84,33 @@ public class ArticleCollectService {
                     // ==== 네이버 API 수집: 관심사 키워드마다 검색 ====
                     for (InterestKeywords ik : interestKeywords) {
                         for (String keyword : ik.keywords()) {
-                            List<CollectedArticle> articles = naverCollector.collect(keyword);
-                            savedCount += processArticles(source, articles, interestKeywords, articleCountByInterest, interestNameById);
+                            try {
+                                List<CollectedArticle> articles = collectNaverWithRetry(keyword);
+                                savedCount += processArticles(
+                                        source,
+                                        articles,
+                                        interestKeywords,
+                                        articleCountByInterest,
+                                        interestNameById
+                                );
+                            } catch (NaverApiException e) {
+                                log.warn("네이버 키워드 기사 수집 실패. source={}, keyword={}, status={}, errorCode={}, retryable={}",
+                                        source.getName(),
+                                        keyword,
+                                        e.getStatusCode(),
+                                        e.getErrorCode(),
+                                        e.isRetryable(),
+                                        e
+                                );
+                            } catch (ArticleCollectException e) {
+                                log.warn("네이버 키워드 기사 수집 실패. source={}, keyword={}, type={}",
+                                        source.getName(),
+                                        keyword,
+                                        e.getClass().getSimpleName(),
+                                        e
+                                );
+                            }
+
                         }
                     }
                 }
@@ -111,6 +142,49 @@ public class ArticleCollectService {
         log.info(">>> 수집 완료: {}건 저장", savedCount);
         return savedCount;
     }
+
+    private List<CollectedArticle> collectNaverWithRetry(String keyword) {
+        int attempt = 0;
+
+        while (true) {
+            attempt++;
+
+            try {
+                return naverCollector.collect(keyword);
+
+            } catch (NaverApiException e) {
+                if (!e.isRetryable() || attempt >= NAVER_MAX_ATTEMPTS) {
+                    throw e;
+                }
+
+                log.warn(
+                        "네이버 API 오류로 기사 수집 재시도. keyword={}, attempt={}, maxAttempts={}, status={}, errorCode={}",
+                        keyword,
+                        attempt,
+                        NAVER_MAX_ATTEMPTS,
+                        e.getStatusCode(),
+                        e.getErrorCode()
+                );
+                retrySleeper.sleep(NAVER_RETRY_BACKOFF_MILLIS);
+
+            } catch (NaverNetworkException e) {
+                if (attempt >= NAVER_MAX_ATTEMPTS) {
+                    throw e;
+                }
+
+                log.warn(
+                        "네이버 네트워크 오류로 기사 수집 재시도. keyword={}, attempt={}, maxAttempts={}",
+                        keyword,
+                        attempt,
+                        NAVER_MAX_ATTEMPTS,
+                        e
+                );
+                retrySleeper.sleep(NAVER_RETRY_BACKOFF_MILLIS);
+            }
+        }
+    }
+
+
 
     private int processArticles(ArticleSource source,
                                 List<CollectedArticle> articles,
