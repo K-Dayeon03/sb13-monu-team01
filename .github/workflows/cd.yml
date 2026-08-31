@@ -1,0 +1,80 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to AWS
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Allow Gradle wrapper execution
+        run: chmod +x gradlew
+
+      - name: Build application
+        run: ./gradlew clean test bootJar --no-daemon
+
+      - name: Package CodeDeploy revision
+        run: |
+          mkdir -p build/deploy
+          jar_file=$(find build/libs -maxdepth 1 -type f -name "*.jar" ! -name "*-plain.jar" | head -n 1)
+          if [ -z "${jar_file}" ]; then
+            echo "No executable jar found in build/libs" >&2
+            exit 1
+          fi
+          cp "${jar_file}" build/deploy/app.jar
+          cp appspec.yml build/deploy/appspec.yml
+          cp -R scripts build/deploy/scripts
+          cd build/deploy
+          zip -r ../monu-${GITHUB_SHA}.zip .
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.2.3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload revision to S3
+        run: |
+          aws s3 cp build/monu-${GITHUB_SHA}.zip \
+            s3://${{ secrets.AWS_CODEDEPLOY_BUCKET }}/monu/${GITHUB_SHA}.zip
+
+      - name: Create CodeDeploy deployment
+        id: deploy
+        run: |
+          deployment_id=$(aws deploy create-deployment \
+            --application-name "${{ secrets.CODEDEPLOY_APPLICATION_NAME }}" \
+            --deployment-group-name "${{ secrets.CODEDEPLOY_DEPLOYMENT_GROUP_NAME }}" \
+            --s3-location bucket=${{ secrets.AWS_CODEDEPLOY_BUCKET }},key=monu/${GITHUB_SHA}.zip,bundleType=zip \
+            --file-exists-behavior OVERWRITE \
+            --query deploymentId \
+            --output text)
+          echo "deployment-id=${deployment_id}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for deployment
+        run: aws deploy wait deployment-successful --deployment-id "${{ steps.deploy.outputs.deployment-id }}"
