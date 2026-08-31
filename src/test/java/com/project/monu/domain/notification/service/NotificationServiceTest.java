@@ -11,12 +11,16 @@ import com.project.monu.domain.notification.entity.Notification;
 import com.project.monu.domain.notification.entity.NotificationResourceType;
 import com.project.monu.domain.notification.repository.NotificationRepository;
 import com.project.monu.global.exception.BusinessException;
+
+import java.lang.reflect.Method;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 class NotificationServiceTest {
 
@@ -237,5 +241,37 @@ class NotificationServiceTest {
         );
 
         verify(notificationRepository, never()).save(any());
+    }
+
+    @Test
+    void 댓글_좋아요_알림_생성은_새_트랜잭션에서_실행된다() throws NoSuchMethodException {
+        Method method = NotificationService.class.getDeclaredMethod(
+                "createCommentLikeNotification",
+                UUID.class,
+                UUID.class,
+                String.class,
+                UUID.class
+        );
+
+        Transactional transactional = method.getAnnotation(Transactional.class);
+
+        assertThat(transactional).isNotNull();
+        assertThat(transactional.propagation()).isEqualTo(Propagation.REQUIRES_NEW);
+    }
+
+    @Test
+    void 관심사_기사_알림_생성은_새_트랜잭션에서_실행된다() throws NoSuchMethodException {
+        Method method = NotificationService.class.getDeclaredMethod(
+                "createInterestArticleNotifications",
+                UUID.class,
+                String.class,
+                int.class,
+                List.class
+        );
+
+        Transactional transactional = method.getAnnotation(Transactional.class);
+
+        assertThat(transactional).isNotNull();
+        assertThat(transactional.propagation()).isEqualTo(Propagation.REQUIRES_NEW);
     }
 }
