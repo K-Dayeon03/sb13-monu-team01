@@ -51,7 +51,7 @@ class BasicUserActivityServiceTest {
             );
 
     @Test
-    void 사용자_활동을_JPA로_조회하고_MongoDB_문서로_저장한다() {
+    void 사용자_활동을_JPA로_조회한_뒤_MongoDB_읽기_모델로_저장하고_문서_기준으로_응답한다() {
         UUID userId = UUID.randomUUID();
         Instant createdAt = Instant.parse("2026-08-28T00:00:00Z");
         User user = createUser("user@email.com", "사용자", createdAt);
@@ -62,6 +62,8 @@ class BasicUserActivityServiceTest {
         when(commentRepository.findAllByUserId(userId)).thenReturn(List.of());
         when(commentLikeRepository.findAllByUserId(userId)).thenReturn(List.of());
         when(articleViewRepository.findAllByUserId(userId)).thenReturn(List.of());
+        when(mongoRepository.save(any(UserActivityDocument.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         UserActivityResponse response = userActivityService.getUserActivity(userId);
 

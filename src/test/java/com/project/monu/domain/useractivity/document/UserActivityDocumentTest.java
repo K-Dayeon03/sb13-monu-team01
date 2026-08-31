@@ -19,7 +19,11 @@ class UserActivityDocumentTest {
         UUID userId = UUID.randomUUID();
         UserActivityResponse response = createUserActivityResponse(userId);
 
-        UserActivityDocument document = UserActivityDocument.from(response);
+        Instant updatedAt = Instant.parse("2026-08-28T05:00:00Z");
+
+        UserActivityDocument document = UserActivityDocument.from(response, updatedAt);
+
+        assertThat(document.getUpdatedAt()).isEqualTo(updatedAt);
 
         assertThat(document.getUserId()).isEqualTo(userId);
         assertThat(document.getUpdatedAt()).isNotNull();
