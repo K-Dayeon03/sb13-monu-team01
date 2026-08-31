@@ -13,6 +13,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -112,7 +113,7 @@ public class NotificationService {
         return notificationRepository.deleteByConfirmedTrueAndUpdatedAtBefore(threshold);
     }
 
-    @Transactional
+    @Transactional (propagation = Propagation.REQUIRES_NEW)
     public void createCommentLikeNotification(
             UUID commentAuthorId,
             UUID likedByUserId,
@@ -133,7 +134,7 @@ public class NotificationService {
         notificationRepository.save(notification);
     }
 
-    @Transactional
+    @Transactional (propagation = Propagation.REQUIRES_NEW)
     public void createInterestArticleNotifications(
             UUID interestId,
             String interestName,

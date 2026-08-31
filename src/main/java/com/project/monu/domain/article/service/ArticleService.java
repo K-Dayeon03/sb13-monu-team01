@@ -188,7 +188,7 @@ public class ArticleService {
 
     public List<String> getSources() {
         return articleSourceRepository.findAllByEnabledTrue().stream()
-                .map(ArticleSource::getName)
+                .map(ArticleSource::getDisplayName)
                 .toList();
     }
 
@@ -208,7 +208,7 @@ public class ArticleService {
 
         return new ArticleDto(
                 article.getId(),
-                article.getSource().getName(),
+                article.getSource().getDisplayName(),
                 article.getSourceUrl(),
                 article.getTitle(),
                 article.getPublishDate(),

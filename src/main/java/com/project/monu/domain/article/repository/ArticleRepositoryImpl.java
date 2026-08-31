@@ -175,7 +175,8 @@ public class ArticleRepositoryImpl implements ArticleRepositoryCustom {
             return null;
         }
 
-        return QArticle.article.source.name.in(filteredSources);
+        return QArticle.article.source.displayName.in(filteredSources)
+                .or(QArticle.article.source.name.in(filteredSources));
     }
 
     // 관심사 ID가 있으면 해당 관심사와 연결된 기사만 조회합니다.
