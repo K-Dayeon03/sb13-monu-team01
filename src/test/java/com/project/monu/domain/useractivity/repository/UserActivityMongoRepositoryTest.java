@@ -20,7 +20,7 @@ import org.testcontainers.mongodb.MongoDBContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @DataMongoTest
-@Testcontainers(disabledWithoutDocker = true)
+@Testcontainers
 class UserActivityMongoRepositoryTest {
 
     @Container
