@@ -51,7 +51,7 @@ public class UserActivityDocument {
         this.updatedAt = updatedAt;
     }
 
-    public static UserActivityDocument from(UserActivityResponse response) {
+    public static UserActivityDocument from(UserActivityResponse response, Instant updatedAt) {
         return new UserActivityDocument(
                 response.id(),
                 response.email(),
@@ -61,7 +61,7 @@ public class UserActivityDocument {
                 response.comments(),
                 response.commentLikes(),
                 response.articleViews(),
-                Instant.now()
+                updatedAt
         );
     }
 
