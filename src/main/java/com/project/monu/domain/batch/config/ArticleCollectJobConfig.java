@@ -14,6 +14,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.interceptor.DefaultTransactionAttribute;
 
 @Configuration
 @EnableBatchProcessing
@@ -35,11 +37,18 @@ public class ArticleCollectJobConfig {
 
     @Bean
     public Step articleCollectStep() {
+        DefaultTransactionAttribute transactionAttribute =
+                new DefaultTransactionAttribute();
+        transactionAttribute.setPropagationBehavior(
+                TransactionDefinition.PROPAGATION_NOT_SUPPORTED
+        );
+
         return new StepBuilder("articleCollectStep", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
                     articleCollectService.collectAll();
                     return RepeatStatus.FINISHED;
                 }, txManager)
+                .transactionAttribute(transactionAttribute)
                 .build();
     }
 }

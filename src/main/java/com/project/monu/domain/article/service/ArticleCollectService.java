@@ -9,24 +9,17 @@ import com.project.monu.domain.article.collector.exception.NaverNetworkException
 import com.project.monu.domain.article.collector.naver.NaverCollector;
 import com.project.monu.domain.article.collector.naver.dto.InterestKeywords;
 import com.project.monu.domain.article.collector.rss.RssCollector;
-import com.project.monu.domain.article.entity.Article;
-import com.project.monu.domain.article.entity.ArticleInterest;
 import com.project.monu.domain.article.entity.ArticleSource;
 import com.project.monu.domain.article.entity.SourceType;
-import com.project.monu.domain.article.repository.ArticleInterestRepository;
-import com.project.monu.domain.article.repository.ArticleRepository;
 import com.project.monu.domain.article.repository.ArticleSourceRepository;
 import com.project.monu.domain.interest.entity.Keyword;
 import com.project.monu.domain.interest.repository.KeywordRepository;
 import com.project.monu.domain.interest.repository.SubscriptionRepository;
 import com.project.monu.domain.notification.event.InterestArticleCreatedEvent;
-import jakarta.persistence.EntityManager;
-import com.project.monu.domain.interest.entity.Interest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -37,21 +30,18 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 @Slf4j
 public class ArticleCollectService {
 
-    private final ArticleRepository articleRepository;
     private final ArticleSourceRepository articleSourceRepository;
-    private final ArticleInterestRepository articleInterestRepository;
     private final KeywordRepository keywordRepository;
     private final KeywordMatcher keywordMatcher;
     private final NaverCollector naverCollector;
     private final RssCollector rssCollector;
-    private final EntityManager entityManager;
     private final ApplicationEventPublisher eventPublisher;
     private final SubscriptionRepository subscriptionRepository;
     private final RetrySleeper retrySleeper;
+    private final ArticleCollectPersistenceService persistenceService;
 
     private static final int NAVER_MAX_ATTEMPTS = 3;
     private static final long NAVER_RETRY_BACKOFF_MILLIS = 1000L;
@@ -228,32 +218,21 @@ public class ArticleCollectService {
                                    Map<UUID, Integer> articleCountByInterest,
                                    Map<UUID, String> interestNameById) {
 
-        if (articleRepository.existsBySourceUrl(article.originalLink())) {
+        ArticleCollectPersistenceService.SaveResult result = persistenceService.saveIfAbsent(
+                source,
+                article,
+                matchedInterestIds
+        );
+
+        if (!result.saved()) {
             return false;
         }
 
-        Article newArticle = Article.builder()
-                .source(source)
-                .sourceUrl(article.originalLink())
-                .title(article.title())
-                .publishDate(article.publishedAt())
-                .summary(article.summary())
-                .build();
-        articleRepository.save(newArticle);
-
-        for (UUID interestId : matchedInterestIds) {
-            Interest interest = entityManager.getReference(Interest.class, interestId);
-            ArticleInterest articleInterest = ArticleInterest.builder()
-                    .article(newArticle)
-                    .interest(interest)
-                    .build();
-
-            articleInterestRepository.save(articleInterest);
-
+        result.interestNames().forEach((interestId, interestName) -> {
             articleCountByInterest.merge(interestId, 1, Integer::sum);
+            interestNameById.putIfAbsent(interestId, interestName);
+        });
 
-            interestNameById.putIfAbsent(interestId, interest.getName());
-        }
         return true;
     }
 
