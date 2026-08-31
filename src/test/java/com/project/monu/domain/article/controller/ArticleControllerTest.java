@@ -325,10 +325,10 @@ class ArticleControllerTest {
 
         // given
         List<String> sources = List.of(
-                "NAVER",
-                "HANKYUNG",
-                "CHOSUN",
-                "YEONHAP"
+                "네이버",
+                "한국경제",
+                "조선일보",
+                "연합뉴스TV"
         );
 
         when(articleService.getSources())
@@ -341,10 +341,10 @@ class ArticleControllerTest {
         // when & then
         mockMvc.perform(get("/api/articles/sources"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0]").value("NAVER"))
-                .andExpect(jsonPath("$[1]").value("HANKYUNG"))
-                .andExpect(jsonPath("$[2]").value("CHOSUN"))
-                .andExpect(jsonPath("$[3]").value("YEONHAP"));
+                .andExpect(jsonPath("$[0]").value("네이버"))
+                .andExpect(jsonPath("$[1]").value("한국경제"))
+                .andExpect(jsonPath("$[2]").value("조선일보"))
+                .andExpect(jsonPath("$[3]").value("연합뉴스TV"));
 
         verify(articleService).getSources();
     }

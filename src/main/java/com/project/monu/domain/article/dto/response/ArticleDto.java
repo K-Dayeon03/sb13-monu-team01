@@ -31,7 +31,7 @@ public record ArticleDto(
     public static ArticleDto from(Article article, boolean viewedByMe) {
         return new ArticleDto(
                 article.getId(),
-                article.getSource().getName(),
+                article.getSource().getDisplayName(),
                 article.getSourceUrl(),
                 article.getTitle(),
                 article.getPublishDate(),

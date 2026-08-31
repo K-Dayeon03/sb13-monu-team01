@@ -1,5 +1,6 @@
 package com.project.monu.domain.article.entity;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,4 +62,20 @@ class ArticleSourceTest {
         // then
         assertThat(source.getSourceUrl()).isEqualTo("https://new.example.com");
     }
+
+    @Test
+    @DisplayName("기사 출처는 내부 이름과 화면 표시 이름을 구분한다")
+    void 기사_출처는_내부_이름과_화면_표시_이름을_구분한다() {
+        ArticleSource source = ArticleSource.builder()
+                .name("NAVER")
+                .displayName("네이버")
+                .type(SourceType.API)
+                .sourceUrl("https://openapi.naver.com")
+                .build();
+
+        assertThat(source.getName()).isEqualTo("NAVER");
+        assertThat(source.getDisplayName()).isEqualTo("네이버");
+    }
+
+
 }
