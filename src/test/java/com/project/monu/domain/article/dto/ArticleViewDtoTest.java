@@ -40,7 +40,7 @@ class ArticleViewDtoTest {
 
         when(article.getId()).thenReturn(articleId);
         when(article.getSource()).thenReturn(source);
-        when(source.getName()).thenReturn("NAVER");
+        when(source.getDisplayName()).thenReturn("네이버");
         when(article.getSourceUrl()).thenReturn("https://example.com/article");
         when(article.getTitle()).thenReturn("기사 제목");
         when(article.getPublishDate()).thenReturn(publishDate);
@@ -57,7 +57,7 @@ class ArticleViewDtoTest {
         assertThat(dto.viewedBy()).isEqualTo(viewerId);
         assertThat(dto.createdAt()).isEqualTo(createdAt);
         assertThat(dto.articleId()).isEqualTo(articleId);
-        assertThat(dto.source()).isEqualTo("NAVER");
+        assertThat(dto.source()).isEqualTo("네이버");
         assertThat(dto.sourceUrl()).isEqualTo("https://example.com/article");
         assertThat(dto.articleTitle()).isEqualTo("기사 제목");
         assertThat(dto.articlePublishedDate()).isEqualTo(publishDate);

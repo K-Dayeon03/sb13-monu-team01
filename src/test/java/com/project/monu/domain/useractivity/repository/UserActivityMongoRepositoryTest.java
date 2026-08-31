@@ -44,8 +44,12 @@ class UserActivityMongoRepositoryTest {
     @Test
     void 사용자_활동_문서를_저장하고_조회한다() {
         UUID userId = UUID.randomUUID();
+
+        Instant updatedAt = Instant.parse("2026-08-28T00:00:00Z");
+
         UserActivityDocument document = UserActivityDocument.from(
-                createResponse(userId, "user@email.com", "사용자")
+                createResponse(userId, "user@email.com", "사용자"),
+                updatedAt
         );
 
         userActivityMongoRepository.save(document);
@@ -74,10 +78,12 @@ class UserActivityMongoRepositoryTest {
         UUID userId = UUID.randomUUID();
 
         UserActivityDocument oldDocument = UserActivityDocument.from(
-                createResponse(userId, "old@email.com", "이전사용자")
+                createResponse(userId, "old@email.com", "이전사용자"),
+                Instant.parse("2026-08-28T00:00:00Z")
         );
         UserActivityDocument newDocument = UserActivityDocument.from(
-                createResponse(userId, "new@email.com", "최신사용자")
+                createResponse(userId, "new@email.com", "최신사용자"),
+                Instant.parse("2026-08-28T00:00:00Z")
         );
 
         userActivityMongoRepository.save(oldDocument);
