@@ -133,6 +133,47 @@ class ArticleRepositoryImplTest {
     }
 
     @Test
+    void sourceIn의_한글_표시_이름으로_필터링된다() {
+        // given
+        ArticleSource naver = source("NAVER", "네이버");
+        ArticleSource chosun = source("CHOSUN", "조선일보");
+
+        Article naverArticle = article(
+                naver, "네이버 기사", "요약",
+                "2026-08-18T00:00:00Z", 1L, 10L
+        );
+
+        Article chosunArticle = article(
+                chosun, "조선 기사", "요약",
+                "2026-08-17T00:00:00Z", 1L, 10L
+        );
+
+        flushAndClear();
+
+        ArticleSearchCondition condition = new ArticleSearchCondition(
+                null,
+                null,
+                List.of("네이버"),
+                null,
+                null,
+                ArticleSortType.PUBLISH_DATE,
+                Sort.Direction.DESC,
+                null,
+                null,
+                10
+        );
+
+        // when
+        List<Article> result = articleRepository.searchByCursor(condition);
+
+        // then
+        assertThat(result).extracting(Article::getId)
+                .containsExactly(naverArticle.getId())
+                .doesNotContain(chosunArticle.getId());
+    }
+
+
+    @Test
     void 발행일_범위로_필터링된다() {
         // given
         ArticleSource source = source("NAVER");
@@ -642,5 +683,17 @@ class ArticleRepositoryImplTest {
     private void flushAndClear() {
         em.flush();
         em.clear();
+    }
+
+    private ArticleSource source(String name, String displayName) {
+        ArticleSource source = ArticleSource.builder()
+                .name(name)
+                .displayName(displayName)
+                .type(SourceType.RSS)
+                .sourceUrl("https://example.com/" + name)
+                .build();
+
+        em.persist(source);
+        return source;
     }
 }
