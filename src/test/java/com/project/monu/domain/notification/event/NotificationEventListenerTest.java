@@ -1,14 +1,19 @@
 package com.project.monu.domain.notification.event;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import com.project.monu.domain.notification.service.NotificationService;
+
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 class NotificationEventListenerTest {
 
@@ -127,5 +132,19 @@ class NotificationEventListenerTest {
                 3,
                 subscriberUserIds
         );
+    }
+
+    @Test
+    void 관심사_기사_이벤트는_트랜잭션이_없어도_실행된다() throws NoSuchMethodException {
+        Method handleMethod = NotificationEventListener.class.getDeclaredMethod(
+                "handle",
+                InterestArticleCreatedEvent.class
+        );
+
+        TransactionalEventListener annotation =
+                handleMethod.getAnnotation(TransactionalEventListener.class);
+
+        assertThat(annotation).isNotNull();
+        assertThat(annotation.fallbackExecution()).isTrue();
     }
 }
