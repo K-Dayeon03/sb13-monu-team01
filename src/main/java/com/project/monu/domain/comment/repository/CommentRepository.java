@@ -16,7 +16,10 @@ public interface CommentRepository
         FROM Comment c
         WHERE c.article.id = :articleId
         """)
+
     List<UUID> findIdsByArticleId(@Param("articleId") UUID articleId);
+
+    List<Comment> findAllByUser_Id(UUID userId);
 
     void deleteAllByArticle_Id(UUID articleId);
 }

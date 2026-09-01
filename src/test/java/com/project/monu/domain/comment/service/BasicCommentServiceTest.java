@@ -19,6 +19,7 @@ import com.project.monu.domain.comment.entity.CommentLike;
 import com.project.monu.domain.comment.repository.CommentLikeRepository;
 import com.project.monu.domain.comment.repository.CommentQueryResult;
 import com.project.monu.domain.comment.repository.CommentRepository;
+import com.project.monu.domain.notification.event.CommentLikedEvent;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.dto.CursorPageResponse;
@@ -34,6 +35,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Sort;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class BasicCommentServiceTest {
@@ -52,6 +54,9 @@ class BasicCommentServiceTest {
 
     @InjectMocks
     private BasicCommentService commentService;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @Test
     void 댓글을_등록한다() {
@@ -653,11 +658,135 @@ class BasicCommentServiceTest {
 
         // when
         BusinessException exception = catchThrowableOfType(
-                BusinessException.class,
-                () -> commentService.unlike(commentId, requestUserId)
+                BusinessException.class, () -> commentService.unlike(commentId, requestUserId)
         );
 
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_LIKE_NOT_FOUND);
+    }
+
+    @Test
+    void 댓글을_물리_삭제한다() {
+        // given
+        UUID commentId = UUID.randomUUID();
+
+        Comment comment = mock(Comment.class);
+        Article article = mock(Article.class);
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        when(comment.getDeletedAt()).thenReturn(null);
+        when(comment.getArticle()).thenReturn(article);
+
+        // when
+        commentService.hardDelete(commentId);
+
+        // then
+        verify(commentLikeRepository).deleteAllByComment_Id(commentId);
+        verify(commentRepository).delete(comment);
+        verify(article).decreaseCommentCount();
+    }
+
+    @Test
+    void 이미_논리_삭제된_댓글을_물리_삭제할때_댓글수는_감소하지_않는다() {
+        // given
+        UUID commentId = UUID.randomUUID();
+
+        Comment comment = mock(Comment.class);
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        when(comment.getDeletedAt()).thenReturn(Instant.parse("2026-08-27T00:00:00Z"));
+
+        // when
+        commentService.hardDelete(commentId);
+
+        // then
+        verify(commentLikeRepository).deleteAllByComment_Id(commentId);
+        verify(commentRepository).delete(comment);
+        verify(comment, never()).getArticle();
+    }
+
+    @Test
+    void 존재하지_않는_댓글은_물리_삭제할수_없다() {
+        // given
+        UUID commentId = UUID.randomUUID();
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.empty());
+
+        // when
+        BusinessException exception = catchThrowableOfType(
+                BusinessException.class, () -> commentService.hardDelete(commentId)
+        );
+
+        // then
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_NOT_FOUND);
+        verifyNoInteractions(commentLikeRepository);
+    }
+
+    @Test
+    void 사용자_물리_삭제시_작성한_댓글과_관련_좋아요를_정리한다() {
+        // given
+        UUID userId = UUID.randomUUID();
+
+        Comment activeComment = mock(Comment.class);
+        Comment deletedComment = mock(Comment.class);
+        Article article = mock(Article.class);
+
+        when(commentRepository.findAllByUser_Id(userId))
+                .thenReturn(List.of(activeComment, deletedComment));
+
+        when(activeComment.getDeletedAt()).thenReturn(null);
+        when(activeComment.getArticle()).thenReturn(article);
+        when(deletedComment.getDeletedAt()).thenReturn(Instant.parse("2026-09-01T00:00:00Z"));
+
+        // when
+        commentService.hardDeleteAllByUserId(userId);
+
+        // then
+        verify(article).decreaseCommentCount();
+        verify(commentLikeRepository).deleteAllByComment_User_Id(userId);
+        verify(commentLikeRepository).deleteAllByLikedBy_Id(userId);
+        verify(commentRepository).deleteAll(List.of(activeComment, deletedComment));
+        verify(deletedComment, never()).getArticle();
+    }
+
+    @Test
+    void 댓글_좋아요_등록시_CommentLikedEvent를_발행한다() {
+        // given
+        UUID commentId = UUID.randomUUID();
+        UUID commentAuthorId = UUID.randomUUID();
+        UUID requestUserId = UUID.randomUUID();
+        UUID articleId = UUID.randomUUID();
+
+        Comment comment = mock(Comment.class);
+        User commentAuthor = mock(User.class);
+        User requestUser = mock(User.class);
+        Article article = mock(Article.class);
+        CommentLike savedLike = mock(CommentLike.class);
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        when(comment.getDeletedAt()).thenReturn(null);
+        when(userRepository.findById(requestUserId)).thenReturn(Optional.of(requestUser));
+        when(commentLikeRepository.existsByComment_IdAndLikedBy_Id(commentId, requestUserId))
+                .thenReturn(false);
+
+        when(comment.getId()).thenReturn(commentId);
+        when(comment.getUser()).thenReturn(commentAuthor);
+        when(comment.getArticle()).thenReturn(article);
+        when(commentAuthor.getId()).thenReturn(commentAuthorId);
+        when(requestUser.getNickname()).thenReturn("좋아요누른사람");
+        when(article.getId()).thenReturn(articleId);
+
+        when(commentLikeRepository.save(any(CommentLike.class))).thenReturn(savedLike);
+
+        // when
+        commentService.like(commentId, requestUserId);
+
+        // then
+        verify(eventPublisher).publishEvent(new CommentLikedEvent(
+                commentAuthorId,
+                requestUserId,
+                "좋아요누른사람",
+                commentId
+        ));
     }
 }

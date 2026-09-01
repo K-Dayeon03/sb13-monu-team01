@@ -265,4 +265,16 @@ class CommentControllerTest {
 
         verify(commentService).unlike(commentId, requestUserId);
     }
+
+    @Test
+    void 댓글을_물리_삭제한다() throws Exception {
+        // given
+        UUID commentId = UUID.randomUUID();
+
+        // when & then
+        mockMvc.perform(delete("/api/comments/{commentId}/hard", commentId))
+                .andExpect(status().isNoContent());
+
+        verify(commentService).hardDelete(commentId);
+    }
 }
