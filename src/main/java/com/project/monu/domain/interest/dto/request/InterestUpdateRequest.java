@@ -7,8 +7,8 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record InterestUpdateRequest(
-        @NotEmpty
-        @Size(min = 1, max = 10)
-        List<@NotBlank String> keywords
+        @NotEmpty(message = "키워드는 1개 이상 입력해주세요.")
+        @Size(max = 10, message = "키워드는 10개 이하로 입력해주세요.")
+        List<@NotBlank(message = "키워드는 빈 값일 수 없습니다.") String> keywords
 ) {
 }

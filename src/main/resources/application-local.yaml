@@ -46,6 +46,8 @@ spring:
 
 batch:
   enabled: true
+  manual:
+    secret: ${BATCH_MANUAL_SECRET:local-batch-secret}
   scheduler:
     # 수동 테스트 중에는 스케줄러가 자동으로 돌지 않게 꺼둡니다.
     enabled: false

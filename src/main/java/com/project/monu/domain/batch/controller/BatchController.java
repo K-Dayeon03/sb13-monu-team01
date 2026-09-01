@@ -6,12 +6,16 @@ import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 
@@ -29,27 +33,36 @@ import java.time.LocalDate;
 @ConditionalOnProperty(name = "batch.enabled", havingValue = "true")
 public class BatchController {
 
+    private static final String BATCH_SECRET_HEADER = "X-BATCH-SECRET";
+
     private final JobOperator jobOperator;
     private final Job articleCollectJob;
     private final Job articleBackupJob;
     private final Job articleRestoreJob;
+    private final String manualSecret;
 
     public BatchController(
             JobOperator jobOperator,
             @Qualifier("articleCollectJob") Job articleCollectJob,
             @Qualifier("articleBackupJob") Job articleBackupJob,
-            @Qualifier("articleRestoreJob") Job articleRestoreJob
+            @Qualifier("articleRestoreJob") Job articleRestoreJob,
+            @Value("${batch.manual.secret:}") String manualSecret
     ) {
         // Job Bean이 여러 개라서 @Qualifier로 수집/백업/복구 Job을 명확히 구분합니다.
         this.jobOperator = jobOperator;
         this.articleCollectJob = articleCollectJob;
         this.articleBackupJob = articleBackupJob;
         this.articleRestoreJob = articleRestoreJob;
+        this.manualSecret = manualSecret;
     }
 
 
     @PostMapping(value = "/collect", produces = "text/plain;charset=UTF-8")
-    public String runCollectJob() throws Exception {
+    public String runCollectJob(
+            @RequestHeader(value = BATCH_SECRET_HEADER, required = false) String batchSecret
+    ) throws Exception {
+        validateManualBatchSecret(batchSecret);
+
         // timestamp를 넣어 매번 다른 JobParameters를 만들면 같은 Job을 반복 실행할 수 있습니다.
         JobParameters params = new JobParametersBuilder()
                 .addLong("timestamp", System.currentTimeMillis())
@@ -60,7 +73,11 @@ public class BatchController {
     }
 
     @PostMapping(value = "/backup", produces = "text/plain;charset=UTF-8")
-    public String runBackupJob() throws Exception {
+    public String runBackupJob(
+            @RequestHeader(value = BATCH_SECRET_HEADER, required = false) String batchSecret
+    ) throws Exception {
+        validateManualBatchSecret(batchSecret);
+
         // 수동 실행도 스케줄 실행과 같은 articleBackupJob을 사용합니다.
         JobParameters params = new JobParametersBuilder()
                 .addLong("timestamp", System.currentTimeMillis())
@@ -74,8 +91,11 @@ public class BatchController {
     public String runRestoreJob(
             @RequestParam
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate date
+            LocalDate date,
+            @RequestHeader(value = BATCH_SECRET_HEADER, required = false) String batchSecret
     ) throws Exception {
+        validateManualBatchSecret(batchSecret);
+
         // 복구 날짜를 JobParameters로 넘겨 Spring Batch 실행 이력에 남깁니다.
         JobParameters params = new JobParametersBuilder()
                 .addString(ArticleRestoreJobConfig.RESTORE_DATE_PARAM, date.toString())
@@ -84,5 +104,11 @@ public class BatchController {
 
         jobOperator.start(articleRestoreJob, params);
         return "기사 복구 배치 실행 완료";
+    }
+
+    private void validateManualBatchSecret(String batchSecret) {
+        if (manualSecret == null || manualSecret.isBlank() || !manualSecret.equals(batchSecret)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "배치 실행 권한이 없습니다.");
+        }
     }
 }

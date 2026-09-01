@@ -3,6 +3,7 @@ package com.project.monu.domain.article.service;
 import com.project.monu.domain.article.collector.KeywordMatcher;
 import com.project.monu.domain.article.collector.RetrySleeper;
 import com.project.monu.domain.article.collector.dto.CollectedArticle;
+import com.project.monu.domain.article.collector.exception.ArticleCollectException;
 import com.project.monu.domain.article.collector.exception.NaverApiException;
 import com.project.monu.domain.article.collector.exception.NaverNetworkException;
 import com.project.monu.domain.article.collector.exception.RssCollectException;
@@ -28,6 +29,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -194,6 +196,36 @@ class ArticleCollectServiceTest {
                 any(CollectedArticle.class),
                 anyList()
         );
+        verify(eventPublisher, never()).publishEvent(any());
+        verifyNoInteractions(subscriptionRepository);
+    }
+
+    @Test
+    @DisplayName("동시 저장으로 중복 제약이 발생하면 중복 기사로 처리한다")
+    void 동시_저장으로_중복_제약이_발생하면_중복_기사로_처리한다() {
+        // given
+        ArticleSource source = rssSource("YEONHAP");
+        UUID interestId = UUID.randomUUID();
+
+        given(articleSourceRepository.findAll()).willReturn(List.of(source));
+        given(keywordRepository.findAllWithInterest()).willReturn(List.of());
+        given(rssCollector.collect(source.getSourceUrl()))
+                .willReturn(List.of(article("제목", "https://example.com/race")));
+        given(keywordMatcher.findMatchedInterests(any(), any()))
+                .willReturn(List.of(interestId));
+        given(articleRepository.existsBySourceUrl("https://example.com/race"))
+                .willReturn(true);
+        given(persistenceService.saveIfAbsent(
+                eq(source),
+                any(CollectedArticle.class),
+                eq(List.of(interestId))
+        )).willThrow(new DataIntegrityViolationException("duplicate source_url"));
+
+        // when
+        int saved = articleCollectService.collectAll();
+
+        // then
+        assertThat(saved).isZero();
         verify(eventPublisher, never()).publishEvent(any());
         verifyNoInteractions(subscriptionRepository);
     }
@@ -604,11 +636,10 @@ class ArticleCollectServiceTest {
         given(naverCollector.collect("축구"))
                 .willThrow(retryableException);
 
-        // when
-        int savedCount = articleCollectService.collectAll();
-
-        // then
-        assertThat(savedCount).isZero();
+        // when & then
+        assertThatThrownBy(articleCollectService::collectAll)
+                .isInstanceOf(ArticleCollectException.class)
+                .hasMessageContaining("모든 외부 기사 수집이 실패했습니다.");
 
         verify(naverCollector, times(3))
                 .collect("축구");
@@ -649,11 +680,10 @@ class ArticleCollectServiceTest {
         given(naverCollector.collect("축구"))
                 .willThrow(nonRetryableException);
 
-        // when
-        int savedCount = articleCollectService.collectAll();
-
-        // then
-        assertThat(savedCount).isZero();
+        // when & then
+        assertThatThrownBy(articleCollectService::collectAll)
+                .isInstanceOf(ArticleCollectException.class)
+                .hasMessageContaining("모든 외부 기사 수집이 실패했습니다.");
 
         verify(naverCollector, times(1))
                 .collect("축구");

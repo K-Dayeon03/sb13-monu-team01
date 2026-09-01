@@ -26,6 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class BatchControllerTest {
 
+    private static final String BATCH_SECRET = "test-batch-secret";
+
     @Mock
     private JobOperator jobOperator;
 
@@ -46,7 +48,8 @@ class BatchControllerTest {
         MockMvc mockMvc = mockMvc();
 
         // when & then
-        mockMvc.perform(post("/api/batch/backup"))
+        mockMvc.perform(post("/api/batch/backup")
+                        .header("X-BATCH-SECRET", BATCH_SECRET))
                 .andExpect(status().isOk())
                 .andExpect(content().string("기사 백업 배치 실행 완료"));
 
@@ -66,7 +69,8 @@ class BatchControllerTest {
 
         // when & then
         mockMvc().perform(post("/api/batch/restore")
-                        .param("date", "2026-08-20"))
+                        .param("date", "2026-08-20")
+                        .header("X-BATCH-SECRET", BATCH_SECRET))
                 .andExpect(status().isOk())
                 .andExpect(content().string("기사 복구 배치 실행 완료"));
 
@@ -78,13 +82,21 @@ class BatchControllerTest {
         assertThat(paramsCaptor.getValue().getLong("timestamp")).isNotNull();
     }
 
+    @Test
+    @DisplayName("수동 배치 실행 secret이 없으면 거부한다")
+    void 수동_배치_실행_secret이_없으면_거부한다() throws Exception {
+        mockMvc().perform(post("/api/batch/backup"))
+                .andExpect(status().isForbidden());
+    }
+
     private MockMvc mockMvc() {
         return MockMvcBuilders
                 .standaloneSetup(new BatchController(
                         jobOperator,
                         articleCollectJob,
                         articleBackupJob,
-                        articleRestoreJob
+                        articleRestoreJob,
+                        BATCH_SECRET
                 ))
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();

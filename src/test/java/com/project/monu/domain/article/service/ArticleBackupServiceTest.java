@@ -5,13 +5,17 @@ import com.project.monu.domain.article.dto.response.ArticleBackupResultDto;
 import com.project.monu.domain.article.dto.response.ArticleRestoreResultDto;
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.entity.ArticleBackup;
+import com.project.monu.domain.article.entity.ArticleInterest;
 import com.project.monu.domain.article.entity.ArticleRestore;
 import com.project.monu.domain.article.entity.ArticleSource;
 import com.project.monu.domain.article.entity.SourceType;
 import com.project.monu.domain.article.repository.ArticleBackupRepository;
+import com.project.monu.domain.article.repository.ArticleInterestRepository;
 import com.project.monu.domain.article.repository.ArticleRepository;
 import com.project.monu.domain.article.repository.ArticleRestoreRepository;
 import com.project.monu.domain.article.repository.ArticleSourceRepository;
+import com.project.monu.domain.interest.entity.Interest;
+import com.project.monu.domain.interest.repository.InterestRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +35,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -44,10 +49,16 @@ class ArticleBackupServiceTest {
     private ArticleSourceRepository articleSourceRepository;
 
     @Mock
+    private ArticleInterestRepository articleInterestRepository;
+
+    @Mock
     private ArticleBackupRepository articleBackupRepository;
 
     @Mock
     private ArticleRestoreRepository articleRestoreRepository;
+
+    @Mock
+    private InterestRepository interestRepository;
 
     @Mock
     private ArticleBackupStorage backupStorage;
@@ -67,11 +78,20 @@ class ArticleBackupServiceTest {
                 "AI 뉴스",
                 Instant.parse("2026-08-21T03:00:00Z")
         );
+        UUID articleId = UUID.randomUUID();
+        ReflectionTestUtils.setField(article, "id", articleId);
+        Interest interest = Interest.create("축구");
+        ArticleInterest articleInterest = ArticleInterest.builder()
+                .article(article)
+                .interest(interest)
+                .build();
 
         given(articleRepository.findByPublishDateGreaterThanEqualAndPublishDateLessThan(
                 Instant.parse("2026-08-20T15:00:00Z"),
                 Instant.parse("2026-08-21T15:00:00Z")
         )).willReturn(List.of(article));
+        given(articleInterestRepository.findByArticle_Id(articleId))
+                .willReturn(List.of(articleInterest));
 
         given(articleBackupRepository.findByS3Key("article-backups/2026-08-21.jsonl"))
                 .willReturn(Optional.empty());
@@ -94,7 +114,9 @@ class ArticleBackupServiceTest {
         assertThat(contentCaptor.getValue())
                 .contains("NAVER")
                 .contains("https://example.com/news/1")
-                .contains("AI 뉴스");
+                .contains("AI 뉴스")
+                .contains("interestNames")
+                .contains("축구");
 
         ArgumentCaptor<ArticleBackup> backupCaptor = ArgumentCaptor.forClass(ArticleBackup.class);
         verify(articleBackupRepository).save(backupCaptor.capture());
@@ -116,9 +138,10 @@ class ArticleBackupServiceTest {
         String key = "article-backups/2026-08-21.jsonl";
         String backupContent = """
                 {"sourceName":"NAVER","sourceUrl":"https://example.com/news/1","title":"기존 기사","publishDate":"2026-08-21T01:00:00Z","summary":"요약1"}
-                {"sourceName":"NAVER","sourceUrl":"https://example.com/news/2","title":"유실 기사","publishDate":"2026-08-21T02:00:00Z","summary":"요약2"}
+                {"sourceName":"NAVER","sourceUrl":"https://example.com/news/2","title":"유실 기사","publishDate":"2026-08-21T02:00:00Z","summary":"요약2","interestNames":["축구"]}
                 """;
         ArticleSource naver = source("NAVER");
+        Interest interest = Interest.create("축구");
         UUID restoredArticleId = UUID.randomUUID();
         ArticleBackup backup = ArticleBackup.create(
                 restoreDate,
@@ -134,6 +157,7 @@ class ArticleBackupServiceTest {
         given(articleRepository.existsBySourceUrl("https://example.com/news/1")).willReturn(true);
         given(articleRepository.existsBySourceUrl("https://example.com/news/2")).willReturn(false);
         given(articleSourceRepository.findByName("NAVER")).willReturn(Optional.of(naver));
+        given(interestRepository.findByNameIn(List.of("축구"))).willReturn(List.of(interest));
         given(articleRepository.save(any(Article.class))).willAnswer(invocation -> {
             Article savedArticle = invocation.getArgument(0);
             ReflectionTestUtils.setField(savedArticle, "id", restoredArticleId);
@@ -165,6 +189,8 @@ class ArticleBackupServiceTest {
         assertThat(savedRestore.getRestoreDate()).isEqualTo(restoreDate);
         assertThat(savedRestore.getRestoredCount()).isEqualTo(1L);
         assertThat(savedRestore.getBackup()).isEqualTo(backup);
+
+        verify(articleInterestRepository).saveAll(anyList());
     }
 
     @Test
@@ -186,8 +212,10 @@ class ArticleBackupServiceTest {
         return new ArticleBackupService(
                 articleRepository,
                 articleSourceRepository,
+                articleInterestRepository,
                 articleBackupRepository,
                 articleRestoreRepository,
+                interestRepository,
                 backupStorage,
                 objectMapper
         );

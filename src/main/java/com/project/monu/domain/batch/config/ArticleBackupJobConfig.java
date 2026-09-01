@@ -14,11 +14,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 
 @Configuration
 @ConditionalOnProperty(name = "batch.enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class ArticleBackupJobConfig {
+
+    private static final ZoneId BACKUP_ZONE = ZoneId.of("Asia/Seoul");
 
     private final JobRepository jobRepository;
     private final PlatformTransactionManager txManager;
@@ -38,7 +41,7 @@ public class ArticleBackupJobConfig {
         return new StepBuilder("articleBackupStep", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
                     // 수집 배치가 하루 중 여러 번 돌 수 있으므로, 안정적으로 확정된 전날 기사를 백업합니다.
-                    LocalDate backupDate = LocalDate.now().minusDays(1);
+                    LocalDate backupDate = LocalDate.now(BACKUP_ZONE).minusDays(1);
                     articleBackupService.backup(backupDate);
                     return RepeatStatus.FINISHED;
                 }, txManager)

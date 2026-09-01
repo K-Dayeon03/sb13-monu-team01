@@ -8,14 +8,14 @@ import java.util.UUID;
 
 public record CommentCreateRequest(
 
-        @NotNull
+        @NotNull(message = "기사 ID는 필수입니다.")
         UUID articleId,
 
-        @NotNull
+        @NotNull(message = "사용자 ID는 필수입니다.")
         UUID userId,
 
-        @NotBlank
-        @Size(max = 500)
+        @NotBlank(message = "댓글 내용을 입력해주세요.")
+        @Size(max = 500, message = "댓글은 500자 이하로 작성해주세요.")
         String content
 
 ) {
