@@ -1,5 +1,6 @@
 package com.project.monu.domain.article.service;
 
+import com.project.monu.domain.article.cursor.ArticleCursor;
 import com.project.monu.domain.article.dto.response.ArticleDto;
 import com.project.monu.domain.article.dto.request.ArticleSearchCondition;
 import com.project.monu.domain.article.dto.request.ArticleSortType;
@@ -49,94 +50,94 @@ public class ArticleService {
             ArticleSearchCondition condition,
             UUID userId
     ) {
+        validateUser(userId);
+
+        ArticleSearchCondition normalizedCondition = normalizeCondition(condition);
+        List<Article> searchedArticles = articleRepository.searchByCursor(normalizedCondition);
+        PageSlice<Article> page = slicePage(searchedArticles, normalizedCondition.limit());
+        List<ArticleDto> content = toArticleDtos(page.content(), userId);
+
+        return buildPageResponse(content, page, normalizedCondition);
+    }
+
+    private void validateUser(UUID userId) {
         if (userId == null || !userRepository.existsByIdAndDeletedAtIsNull(userId)) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
-        // limit이 0 이하이면 기본 페이지 크기 10으로, 너무 크면 최대 100으로 보정합니다.
-        // 이후 Repository에서는 limit + 1개를 조회해서 다음 페이지 존재 여부를 판단합니다.
+    }
+
+    /**
+     * 목록 조회 조건에 기본 정렬값과 페이지 크기 제한을 적용합니다.
+     *
+     * <p>Controller에서 기본값을 받더라도 Service에서 한 번 더 보정해 두면,
+     * 테스트나 다른 내부 호출이 들어와도 Repository는 항상 같은 규칙의 조건을 받습니다.</p>
+     */
+    private ArticleSearchCondition normalizeCondition(ArticleSearchCondition condition) {
         int size = normalizeSize(condition.limit());
-        ArticleSearchCondition normalizedCondition = new ArticleSearchCondition(
+
+        return new ArticleSearchCondition(
                 condition.keyword(),
                 condition.interestId(),
                 condition.sourceIn(),
                 condition.publishDateFrom(),
                 condition.publishDateTo(),
-                condition.orderBy() == null ? ArticleSortType.PUBLISH_DATE : condition.orderBy(),
+                ArticleSortType.resolve(condition.orderBy()),
                 condition.direction() == null ? Sort.Direction.DESC : condition.direction(),
                 condition.after(),
                 condition.cursor(),
                 size
         );
+    }
 
-        // 검색어, 출처, 관심사, 날짜 범위, 커서 조건을 적용해 기사 목록을 조회합니다.
-        // 실제 동적 쿼리 조립은 ArticleRepositoryImpl에서 QueryDSL로 처리합니다.
-        List<Article> articles = articleRepository.searchByCursor(normalizedCondition);
-
-        // 요청한 size보다 1개 더 조회되었다면 다음 페이지가 있다는 뜻입니다.
+    /**
+     * Repository가 size + 1개를 조회한 결과에서 실제 응답에 담을 size개만 잘라냅니다.
+     *
+     * <p>마지막 1개는 다음 페이지 존재 여부를 판단하기 위한 여분이라 클라이언트에는 내려주지 않습니다.</p>
+     */
+    private PageSlice<Article> slicePage(List<Article> articles, int size) {
         boolean hasNext = articles.size() > size;
-
         if (hasNext) {
-            // 응답에는 요청한 size만큼만 내려주고, 추가로 조회한 1개는 hasNext 판단에만 사용합니다.
-            articles = articles.subList(0, size);
+            return new PageSlice<>(articles.subList(0, size), true);
         }
 
-        // 현재 페이지에 포함된 기사 ID만 추립니다.
-        // 이 ID 목록으로 사용자가 조회한 기사인지 한 번에 확인합니다.
+        return new PageSlice<>(articles, false);
+    }
+
+    /**
+     * 현재 사용자 기준의 viewedByMe 값을 붙여 API 응답 DTO로 변환합니다.
+     */
+    private List<ArticleDto> toArticleDtos(List<Article> articles, UUID userId) {
         List<UUID> articleIds = articles.stream()
                 .map(Article::getId)
                 .toList();
 
-        // viewedByMe는 Article 자체의 컬럼이 아니라 "현재 사용자 기준" 계산값입니다.
-        // 목록의 각 기사마다 조회 이력을 따로 조회하면 N+1 문제가 생기므로,
-        // 현재 페이지의 기사 ID들을 기준으로 조회 이력을 한 번에 가져옵니다.
         Set<UUID> viewedArticleIds = articleIds.isEmpty()
                 ? Set.of()
                 : articleViewRepository.findViewedArticleIds(userId, articleIds);
 
-        // Entity는 DB 구조를 표현하고, DTO는 API 응답 형태를 표현합니다.
-        // ArticleSource 엔티티에서는 화면/응답에 필요한 출처 이름만 꺼내 담습니다.
-        List<ArticleDto> content = articles.stream()
-                .map(article -> new ArticleDto(
-                        article.getId(),
-                        article.getSource().getName(),
-                        article.getSourceUrl(),
-                        article.getTitle(),
-                        article.getPublishDate(),
-                        article.getSummary(),
-                        article.getCommentCount(),
-                        article.getViewCount(),
-                        viewedArticleIds.contains(article.getId())
-                ))
+        return articles.stream()
+                .map(article -> ArticleDto.from(article, viewedArticleIds.contains(article.getId())))
                 .toList();
-
-        // 현재 페이지의 마지막 기사를 기준으로 다음 페이지 커서를 만듭니다.
-        // nextCursor는 정렬 기준별 커서 값을 담고, nextAfter는 마지막 기사 발행 시각을 함께 내려줍니다.
-        Article lastArticle = articles.isEmpty() ? null : articles.get(articles.size() - 1);
-
-        return new CursorPageResponse<>(
-                content,
-                hasNext ? createNextCursor(lastArticle, normalizedCondition.orderBy()) : null,
-                hasNext && lastArticle != null ? lastArticle.getPublishDate() : null,
-                size,
-                articleRepository.countByCondition(normalizedCondition),
-                hasNext
-        );
     }
 
-    private String createNextCursor(Article article, ArticleSortType sortType) {
-        if (article == null) {
-            return null;
-        }
+    /**
+     * 현재 페이지와 커서 정보를 조합해 공통 페이지 응답을 만듭니다.
+     */
+    private CursorPageResponse<ArticleDto> buildPageResponse(
+            List<ArticleDto> content,
+            PageSlice<Article> page,
+            ArticleSearchCondition condition
+    ) {
+        Article lastArticle = page.lastItem();
 
-        ArticleSortType resolvedSortType = sortType == null
-                ? ArticleSortType.PUBLISH_DATE
-                : sortType;
-
-        return switch (resolvedSortType) {
-            case COMMENT_COUNT -> article.getCommentCount() + "_" + article.getId();
-            case VIEW_COUNT -> article.getViewCount() + "_" + article.getId();
-            case PUBLISH_DATE -> article.getId().toString();
-        };
+        return CursorPageResponse.of(
+                content,
+                page.hasNext() ? ArticleCursor.createNextCursor(lastArticle, condition.orderBy()) : null,
+                page.hasNext() && lastArticle != null ? lastArticle.getPublishDate() : null,
+                condition.limit(),
+                articleRepository.countByCondition(condition),
+                page.hasNext()
+        );
     }
 
     private int normalizeSize(int requestedSize) {
@@ -145,6 +146,13 @@ public class ArticleService {
         }
 
         return Math.min(requestedSize, MAX_PAGE_SIZE);
+    }
+
+    private record PageSlice<T>(List<T> content, boolean hasNext) {
+
+        private T lastItem() {
+            return content.isEmpty() ? null : content.get(content.size() - 1);
+        }
     }
 
     @Transactional
@@ -180,7 +188,7 @@ public class ArticleService {
 
     public List<String> getSources() {
         return articleSourceRepository.findAllByEnabledTrue().stream()
-                .map(ArticleSource::getName)
+                .map(ArticleSource::getDisplayName)
                 .toList();
     }
 
@@ -200,7 +208,7 @@ public class ArticleService {
 
         return new ArticleDto(
                 article.getId(),
-                article.getSource().getName(),
+                article.getSource().getDisplayName(),
                 article.getSourceUrl(),
                 article.getTitle(),
                 article.getPublishDate(),

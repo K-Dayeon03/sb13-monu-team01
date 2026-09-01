@@ -36,7 +36,7 @@ public class ArticleCollectScheduler {
                     .toJobParameters();
 
             jobOperator.start(articleCollectJob, params);
-            log.info(">>> 기사 수집 배치 스케줄 실행");
+            log.info(">>> 기사 수집 배치 완료");
         } catch (Exception e) {
             log.error("기사 수집 배치 스케줄 실행 실패", e);
         }

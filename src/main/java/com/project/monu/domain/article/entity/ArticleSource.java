@@ -30,9 +30,13 @@ public class ArticleSource {
     private UUID id;
 
 
-    // 출처 이름 (예: NAVER, 한국경제, 조선일보...)
+    // 내부 식별용 출처 이름 (예: NAVER, HANKYUNG)
     @Column(name = "name", length = 50, nullable = false)
     private String name;
+
+    // 사용자 화면에 표시할 출처 이름 (예: 네이버, 한국경제)
+    @Column(name = "display_name", length = 50, nullable = false)
+    private String displayName;
 
     // 출처 유형 (API / RSS)
     @Enumerated(EnumType.STRING)
@@ -57,8 +61,10 @@ public class ArticleSource {
 
 
     @Builder
-    public ArticleSource(String name, SourceType type, String sourceUrl) {
+    public ArticleSource(String name,String displayName, SourceType type, String sourceUrl) {
         this.name = name;
+        this.displayName = displayName == null || displayName.isBlank()
+                ? name : displayName;
         this.type = type;
         this.sourceUrl = sourceUrl;
         this.enabled = true;

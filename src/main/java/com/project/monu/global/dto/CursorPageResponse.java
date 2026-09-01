@@ -4,7 +4,10 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * 커서 기반 페이지 응답
+ * 커서 기반 페이지 응답입니다.
+ *
+ * <p>nextCursor와 nextAfter의 구체적인 의미는 각 목록 API의 정렬 기준에 따라 달라집니다.
+ * 이 공통 응답 객체는 페이지 결과를 담는 역할만 하고, 커서 포맷 해석은 도메인별 코드가 담당합니다.</p>
  *
  * @param content 페이지 내용
  * @param nextCursor 다음 페이지 커서
@@ -13,22 +16,6 @@ import java.util.List;
  * @param totalElements 총 요소 수
  * @param hasNext 다음 페이지 존재 여부
  */
-/*
-* 정렬 기준별
-* PUBLISH_DATE 정렬
-* - nextAfter = 마지막 기사 publishDate
-* - nextCursor = 마지막 기사 id
-
-* COMMENT_COUNT 정렬
-* - nextCursor = 마지막 기사 commentCount + "_" + 마지막 기사 id
-* - nextAfter = 마지막 기사 publishDate
-
-
-* VIEW_COUNT 정렬
-* - nextCursor = 마지막 기사 viewCount + "_" + 마지막 기사 id
-* - nextAfter = 마지막 기사 publishDate
-* */
-
 public record CursorPageResponse<T>(
 
         List<T> content,

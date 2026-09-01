@@ -37,7 +37,7 @@ public record ArticleViewDto(
                 articleView.getViewer().getId(),
                 articleView.getCreatedAt(),
                 article.getId(),
-                article.getSource().getName(),
+                article.getSource().getDisplayName(),
                 article.getSourceUrl(),
                 article.getTitle(),
                 article.getPublishDate(),

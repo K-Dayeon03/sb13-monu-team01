@@ -39,6 +39,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -361,31 +362,28 @@ class ArticleServiceTest {
     }
 
     @Test
-    void 활성화된_기사_출처_이름_목록을_반환한다() {
+    void 활성화된_기사_출처_표시_이름_목록을_반환한다() {
         // given
         ArticleSource naver = ArticleSource.builder()
                 .name("NAVER")
+                .displayName("네이버")
                 .type(SourceType.API)
-                .sourceUrl("https://naver.example.com")
+                .sourceUrl("https://openapi.naver.com/v1/search/news.json")
                 .build();
 
         ArticleSource hankyung = ArticleSource.builder()
                 .name("HANKYUNG")
+                .displayName("한국경제")
                 .type(SourceType.RSS)
-                .sourceUrl("https://hankyung.example.com/rss")
+                .sourceUrl("https://example.com/rss")
                 .build();
 
-        when(articleSourceRepository.findAllByEnabledTrue())
-                .thenReturn(List.of(naver, hankyung));
+        given(articleSourceRepository.findAllByEnabledTrue())
+                .willReturn(List.of(naver, hankyung));
 
-        // when
         List<String> result = articleService.getSources();
 
-        // then
-        assertThat(result)
-                .containsExactly("NAVER", "HANKYUNG");
-
-        verify(articleSourceRepository).findAllByEnabledTrue();
+        assertThat(result).containsExactly("네이버", "한국경제");
     }
 
     @Test
@@ -397,6 +395,7 @@ class ArticleServiceTest {
 
         ArticleSource source = ArticleSource.builder()
                 .name("NAVER")
+                .displayName("네이버")
                 .type(SourceType.API)
                 .sourceUrl("https://naver.example.com")
                 .build();
@@ -425,7 +424,7 @@ class ArticleServiceTest {
 
         // then
         assertThat(result.id()).isEqualTo(articleId);
-        assertThat(result.source()).isEqualTo("NAVER");
+        assertThat(result.source()).isEqualTo("네이버");
         assertThat(result.sourceUrl())
                 .isEqualTo("https://example.com/article/1");
         assertThat(result.title()).isEqualTo("테스트 기사");
@@ -735,12 +734,12 @@ class ArticleServiceTest {
         );
     }
 
-    private Article article(UUID id, String sourceName, Long commentCount, Long viewCount) {
+    private Article article(UUID id, String displayName, Long commentCount, Long viewCount) {
         Article article = mock(Article.class);
         ArticleSource source = mock(ArticleSource.class);
 
         when(article.getId()).thenReturn(id);
-        when(source.getName()).thenReturn(sourceName);
+        when(source.getDisplayName()).thenReturn(displayName);
         when(article.getSource()).thenReturn(source);
         when(article.getSourceUrl()).thenReturn("https://example.com/" + id);
         when(article.getTitle()).thenReturn("title");

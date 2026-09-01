@@ -6,7 +6,9 @@ build/
 !**/src/test/**/build/
 .DS_Store
 .env
+logs
 backups/
+logs/
 ### STS ###
 .apt_generated
 .classpath
