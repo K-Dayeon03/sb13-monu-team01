@@ -1,4 +1,4 @@
-spring:
+
   application:
     name: sb13-monu-team01
 
@@ -6,11 +6,11 @@ spring:
     representation:
       uuid: standard
 
-logging:
-  file:
-    path: ${LOG_FILE_PATH:logs}
+  logging:
+    file:
+      path: ${LOG_FILE_PATH:logs}
 
-naver:
-  api:
-    client-id: ${NAVER_CLIENT_ID}
-    client-secret: ${NAVER_CLIENT_SECRET}
+  naver:
+    api:
+      client-id: ${NAVER_CLIENT_ID}
+      client-secret: ${NAVER_CLIENT_SECRET}

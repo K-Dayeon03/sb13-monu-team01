@@ -12,15 +12,28 @@ fi
 
 PORT="${SERVER_PORT:-8080}"
 HEALTH_URL="http://127.0.0.1:${PORT}/actuator/health"
+MAX_ATTEMPTS=40
+SLEEP_SECONDS=3
 
-for attempt in $(seq 1 30); do
-  if curl -fsS "${HEALTH_URL}" >/dev/null; then
+print_service_logs() {
+  systemctl --no-pager --full status monu.service || true
+  journalctl -u monu.service -n 100 --no-pager || true
+}
+
+for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
+  if ! systemctl is-active --quiet monu.service; then
+    echo "monu.service is not active during health check."
+    print_service_logs
+    exit 1
+  fi
+
+  if curl -fsS --connect-timeout 2 --max-time 2 "${HEALTH_URL}" >/dev/null; then
     exit 0
   fi
-  echo "Waiting for Monu health check (${attempt}/30): ${HEALTH_URL}"
-  sleep 3
+
+  echo "Waiting for Monu health check (${attempt}/${MAX_ATTEMPTS}): ${HEALTH_URL}"
+  sleep "${SLEEP_SECONDS}"
 done
 
-systemctl --no-pager --full status monu.service || true
-journalctl -u monu.service -n 100 --no-pager || true
+print_service_logs
 exit 1

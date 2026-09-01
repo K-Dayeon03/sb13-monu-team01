@@ -52,13 +52,13 @@ public class BasicUserActivityService implements UserActivityService {
     @Transactional
     public UserActivityResponse getUserActivity(UUID userId) {
         UserActivityResponse latestActivity = loadLatestUserActivity(userId);
-        UserActivityDocument savedDocument = saveUserActivityReadModel(latestActivity);
+        saveUserActivityReadModel(latestActivity);
 
-        return savedDocument.toResponse();
+        return latestActivity;
     }
 
-    private UserActivityDocument saveUserActivityReadModel(UserActivityResponse response) {
-        return mongoRepository.save(UserActivityDocument.from(response, Instant.now()));
+    private void saveUserActivityReadModel(UserActivityResponse response) {
+        mongoRepository.save(UserActivityDocument.from(response, Instant.now()));
     }
 
     private UserActivityResponse loadLatestUserActivity(UUID userId) {

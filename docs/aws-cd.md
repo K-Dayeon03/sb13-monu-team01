@@ -44,6 +44,7 @@ GitHub Actions Role 최소 권한 예시:
       "Action": [
         "codedeploy:CreateDeployment",
         "codedeploy:GetApplication",
+        "codedeploy:GetApplicationRevision",
         "codedeploy:GetDeployment",
         "codedeploy:GetDeploymentGroup"
       ],
@@ -86,3 +87,18 @@ JAVA_OPTS=-Xms256m -Xmx512m
 GitHub Actions는 테스트와 `bootJar` 빌드를 실행한 뒤 `app.jar`, `appspec.yml`, `scripts/`를 zip으로 묶어 S3에 업로드합니다. 이후 CodeDeploy가 EC2의 `/opt/monu`로 파일을 복사하고 `monu.service`를 systemd 서비스로 실행합니다.
 
 배포 후 헬스 체크는 `/actuator/health`를 호출합니다.
+
+## 5. 배포 실패 점검
+
+CodeDeploy에서 `Failing in-progress lifecycle event after an agent restart`가 표시되면 EC2 인스턴스 안에서 아래 항목을 먼저 확인합니다.
+
+```bash
+sudo systemctl status codedeploy-agent --no-pager --full
+sudo journalctl -u codedeploy-agent -n 200 --no-pager
+sudo tail -n 200 /var/log/aws/codedeploy-agent/codedeploy-agent.log
+sudo tail -n 200 /opt/codedeploy-agent/deployment-root/deployment-logs/codedeploy-agent-deployments.log
+sudo systemctl status monu.service --no-pager --full
+sudo journalctl -u monu.service -n 200 --no-pager
+```
+
+`monu.service`가 시작 직후 종료되면 `/etc/monu/monu.env`에 운영 필수 값이 있는지 확인합니다. 최소한 `MONGODB_URI`, `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `AWS_S3_BUCKET`, `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`은 실제 운영 값으로 채워져야 합니다.

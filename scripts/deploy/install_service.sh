@@ -34,3 +34,4 @@ EOF
 chmod 644 "${SERVICE_FILE}"
 systemctl daemon-reload
 systemctl enable monu.service
+systemctl reset-failed monu.service || true
