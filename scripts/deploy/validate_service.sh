@@ -12,13 +12,18 @@ fi
 
 PORT="${SERVER_PORT:-8080}"
 HEALTH_URL="http://127.0.0.1:${PORT}/actuator/health"
+VALIDATION_TIMEOUT_SECONDS=150
+SLEEP_SECONDS=3
+attempt=1
 
-for attempt in $(seq 1 30); do
-  if curl -fsS "${HEALTH_URL}" >/dev/null; then
+while [ "${SECONDS}" -lt "${VALIDATION_TIMEOUT_SECONDS}" ]; do
+  if curl -fsS --connect-timeout 2 --max-time 2 "${HEALTH_URL}" >/dev/null; then
     exit 0
   fi
-  echo "Waiting for Monu health check (${attempt}/30): ${HEALTH_URL}"
-  sleep 3
+
+  echo "Waiting for Monu health check (${attempt}): ${HEALTH_URL}"
+  attempt=$((attempt + 1))
+  sleep "${SLEEP_SECONDS}"
 done
 
 systemctl --no-pager --full status monu.service || true

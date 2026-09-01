@@ -15,6 +15,8 @@ import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.exception.BusinessException;
 import com.project.monu.global.exception.ErrorCode;
+
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -49,14 +51,17 @@ public class BasicUserActivityService implements UserActivityService {
     @Override
     @Transactional
     public UserActivityResponse getUserActivity(UUID userId) {
-        UserActivityResponse response = createUserActivity(userId);
+        UserActivityResponse latestActivity = loadLatestUserActivity(userId);
+        saveUserActivityReadModel(latestActivity);
 
-        mongoRepository.save(UserActivityDocument.from(response));
-
-        return response;
+        return latestActivity;
     }
 
-    private UserActivityResponse createUserActivity(UUID userId) {
+    private void saveUserActivityReadModel(UserActivityResponse response) {
+        mongoRepository.save(UserActivityDocument.from(response, Instant.now()));
+    }
+
+    private UserActivityResponse loadLatestUserActivity(UUID userId) {
         User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
