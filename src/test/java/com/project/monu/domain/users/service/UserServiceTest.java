@@ -125,7 +125,7 @@ class UserServiceTest {
         "password123!"
     );
 
-    when(userRepository.findByEmail(request.email()))
+    when(userRepository.findByEmailAndDeletedAtIsNull(request.email()))
         .thenReturn(Optional.of(user));
 
     when(passwordEncoder.matches(
@@ -253,7 +253,7 @@ class UserServiceTest {
         .password("encoded-password")
         .build();
 
-    when(userRepository.findById(userId))
+    when(userRepository.findByIdAndDeletedAtIsNull(userId))
         .thenReturn(Optional.of(user));
 
     when(userRepository.save(user))
