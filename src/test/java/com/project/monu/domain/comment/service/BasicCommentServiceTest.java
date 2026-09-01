@@ -19,6 +19,7 @@ import com.project.monu.domain.comment.entity.CommentLike;
 import com.project.monu.domain.comment.repository.CommentLikeRepository;
 import com.project.monu.domain.comment.repository.CommentQueryResult;
 import com.project.monu.domain.comment.repository.CommentRepository;
+import com.project.monu.domain.notification.event.CommentLikedEvent;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.dto.CursorPageResponse;
@@ -34,6 +35,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Sort;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class BasicCommentServiceTest {
@@ -52,6 +54,9 @@ class BasicCommentServiceTest {
 
     @InjectMocks
     private BasicCommentService commentService;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @Test
     void 댓글을_등록한다() {
@@ -742,5 +747,46 @@ class BasicCommentServiceTest {
         verify(commentLikeRepository).deleteAllByLikedBy_Id(userId);
         verify(commentRepository).deleteAll(List.of(activeComment, deletedComment));
         verify(deletedComment, never()).getArticle();
+    }
+
+    @Test
+    void 댓글_좋아요_등록시_CommentLikedEvent를_발행한다() {
+        // given
+        UUID commentId = UUID.randomUUID();
+        UUID commentAuthorId = UUID.randomUUID();
+        UUID requestUserId = UUID.randomUUID();
+        UUID articleId = UUID.randomUUID();
+
+        Comment comment = mock(Comment.class);
+        User commentAuthor = mock(User.class);
+        User requestUser = mock(User.class);
+        Article article = mock(Article.class);
+        CommentLike savedLike = mock(CommentLike.class);
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        when(comment.getDeletedAt()).thenReturn(null);
+        when(userRepository.findById(requestUserId)).thenReturn(Optional.of(requestUser));
+        when(commentLikeRepository.existsByComment_IdAndLikedBy_Id(commentId, requestUserId))
+                .thenReturn(false);
+
+        when(comment.getId()).thenReturn(commentId);
+        when(comment.getUser()).thenReturn(commentAuthor);
+        when(comment.getArticle()).thenReturn(article);
+        when(commentAuthor.getId()).thenReturn(commentAuthorId);
+        when(requestUser.getNickname()).thenReturn("좋아요누른사람");
+        when(article.getId()).thenReturn(articleId);
+
+        when(commentLikeRepository.save(any(CommentLike.class))).thenReturn(savedLike);
+
+        // when
+        commentService.like(commentId, requestUserId);
+
+        // then
+        verify(eventPublisher).publishEvent(new CommentLikedEvent(
+                commentAuthorId,
+                requestUserId,
+                "좋아요누른사람",
+                commentId
+        ));
     }
 }
