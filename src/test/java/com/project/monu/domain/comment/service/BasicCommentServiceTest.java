@@ -681,7 +681,7 @@ class BasicCommentServiceTest {
         commentService.hardDelete(commentId);
 
         // then
-        verify(commentLikeRepository).deleteAllByComment_IdIn(List.of(commentId));
+        verify(commentLikeRepository).deleteAllByComment_Id(commentId);
         verify(commentRepository).delete(comment);
         verify(article).decreaseCommentCount();
     }
@@ -700,7 +700,7 @@ class BasicCommentServiceTest {
         commentService.hardDelete(commentId);
 
         // then
-        verify(commentLikeRepository).deleteAllByComment_IdIn(List.of(commentId));
+        verify(commentLikeRepository).deleteAllByComment_Id(commentId);
         verify(commentRepository).delete(comment);
         verify(comment, never()).getArticle();
     }
