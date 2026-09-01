@@ -1,0 +1,8 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+batch:
+  manual:
+    secret: ${BATCH_MANUAL_SECRET}
