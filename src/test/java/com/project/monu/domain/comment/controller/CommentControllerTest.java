@@ -203,7 +203,8 @@ class CommentControllerTest {
         mockMvc.perform(post("/api/comments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details.content").value("댓글 내용을 입력해주세요."));
 
         verifyNoInteractions(commentService);
     }

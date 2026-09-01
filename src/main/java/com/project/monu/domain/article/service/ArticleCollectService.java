@@ -11,6 +11,7 @@ import com.project.monu.domain.article.collector.naver.dto.InterestKeywords;
 import com.project.monu.domain.article.collector.rss.RssCollector;
 import com.project.monu.domain.article.entity.ArticleSource;
 import com.project.monu.domain.article.entity.SourceType;
+import com.project.monu.domain.article.repository.ArticleRepository;
 import com.project.monu.domain.article.repository.ArticleSourceRepository;
 import com.project.monu.domain.interest.entity.Keyword;
 import com.project.monu.domain.interest.repository.KeywordRepository;
@@ -19,6 +20,7 @@ import com.project.monu.domain.notification.event.InterestArticleCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -38,6 +40,7 @@ public class ArticleCollectService {
     private final KeywordMatcher keywordMatcher;
     private final NaverCollector naverCollector;
     private final RssCollector rssCollector;
+    private final ArticleRepository articleRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final SubscriptionRepository subscriptionRepository;
     private final RetrySleeper retrySleeper;
@@ -54,6 +57,8 @@ public class ArticleCollectService {
         // 관심사 + 키워드는 한 번만 로드 (매 기사마다 조회 방지)
         List<InterestKeywords> interestKeywords = loadInterestKeywords();
         int savedCount = 0;
+        int collectionSuccessCount = 0;
+        int collectionFailureCount = 0;
 
         Map<UUID, Integer> articleCountByInterest = new HashMap<>();
         Map<UUID, String> interestNameById =  new HashMap<>();
@@ -69,6 +74,7 @@ public class ArticleCollectService {
                 if (source.getType() == SourceType.RSS) {
                     // ==== RSS 수집 ====
                     List<CollectedArticle> articles = rssCollector.collect(source.getSourceUrl());
+                    collectionSuccessCount++;
                     savedCount += processArticles(source, articles, interestKeywords, articleCountByInterest, interestNameById);
                 }else if (source.getType() == SourceType.API){
                     // ==== 네이버 API 수집: 관심사 키워드마다 검색 ====
@@ -76,6 +82,7 @@ public class ArticleCollectService {
                         for (String keyword : ik.keywords()) {
                             try {
                                 List<CollectedArticle> articles = collectNaverWithRetry(keyword);
+                                collectionSuccessCount++;
                                 savedCount += processArticles(
                                         source,
                                         articles,
@@ -84,6 +91,7 @@ public class ArticleCollectService {
                                         interestNameById
                                 );
                             } catch (NaverApiException e) {
+                                collectionFailureCount++;
                                 log.warn("네이버 키워드 기사 수집 실패. source={}, keyword={}, status={}, errorCode={}, retryable={}",
                                         source.getName(),
                                         keyword,
@@ -93,6 +101,7 @@ public class ArticleCollectService {
                                         e
                                 );
                             } catch (ArticleCollectException e) {
+                                collectionFailureCount++;
                                 log.warn("네이버 키워드 기사 수집 실패. source={}, keyword={}, type={}",
                                         source.getName(),
                                         keyword,
@@ -105,6 +114,7 @@ public class ArticleCollectService {
                     }
                 }
             } catch (NaverApiException e){
+                collectionFailureCount++;
                 log.warn("네이버 기사 수집 실패. source={}, status={}, errorCode={}, retryable={}",
                         source.getName(),
                         e.getStatusCode(),
@@ -113,6 +123,7 @@ public class ArticleCollectService {
                         e
                         );
             } catch (ArticleCollectException e) {
+                collectionFailureCount++;
                 log.warn("기사 수집 실패. source={}, type={}",
                         source.getName(),
                         source.getType(),
@@ -127,6 +138,11 @@ public class ArticleCollectService {
                 throw e;
             }
         }
+
+        if (collectionFailureCount > 0 && collectionSuccessCount == 0) {
+            throw new ArticleCollectException("모든 외부 기사 수집이 실패했습니다.");
+        }
+
         publishInterestArticleCreatedEvents(articleCountByInterest, interestNameById);
 
         log.info(">>> 수집 완료: {}건 저장", savedCount);
@@ -218,11 +234,21 @@ public class ArticleCollectService {
                                    Map<UUID, Integer> articleCountByInterest,
                                    Map<UUID, String> interestNameById) {
 
-        ArticleCollectPersistenceService.SaveResult result = persistenceService.saveIfAbsent(
-                source,
-                article,
-                matchedInterestIds
-        );
+        ArticleCollectPersistenceService.SaveResult result;
+        try {
+            result = persistenceService.saveIfAbsent(
+                    source,
+                    article,
+                    matchedInterestIds
+            );
+        } catch (DataIntegrityViolationException e) {
+            if (articleRepository.existsBySourceUrl(article.originalLink())) {
+                log.info("이미 저장된 기사로 판단해 건너뜁니다. sourceUrl={}", article.originalLink(), e);
+                return false;
+            }
+
+            throw e;
+        }
 
         if (!result.saved()) {
             return false;
