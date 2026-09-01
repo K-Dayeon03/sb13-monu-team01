@@ -116,6 +116,20 @@ public class BasicCommentService implements CommentService {
 
     @Transactional
     @Override
+    public void hardDeleteAllByUserId(UUID userId) {
+        List<Comment> comments = commentRepository.findAllByUser_Id(userId);
+
+        comments.stream()
+                .filter(comment -> comment.getDeletedAt() == null)
+                .forEach(comment -> comment.getArticle().decreaseCommentCount());
+
+        commentLikeRepository.deleteAllByComment_User_Id(userId);
+        commentLikeRepository.deleteAllByLikedBy_Id(userId);
+        commentRepository.deleteAll(comments);
+    }
+
+    @Transactional
+    @Override
     public CommentLikeDto like(UUID commentId, UUID requestUserId) {
         Comment comment = getActiveComment(commentId);
 

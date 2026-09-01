@@ -716,4 +716,31 @@ class BasicCommentServiceTest {
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_NOT_FOUND);
         verifyNoInteractions(commentLikeRepository);
     }
+
+    @Test
+    void 사용자_물리_삭제시_작성한_댓글과_관련_좋아요를_정리한다() {
+        // given
+        UUID userId = UUID.randomUUID();
+
+        Comment activeComment = mock(Comment.class);
+        Comment deletedComment = mock(Comment.class);
+        Article article = mock(Article.class);
+
+        when(commentRepository.findAllByUser_Id(userId))
+                .thenReturn(List.of(activeComment, deletedComment));
+
+        when(activeComment.getDeletedAt()).thenReturn(null);
+        when(activeComment.getArticle()).thenReturn(article);
+        when(deletedComment.getDeletedAt()).thenReturn(Instant.parse("2026-09-01T00:00:00Z"));
+
+        // when
+        commentService.hardDeleteAllByUserId(userId);
+
+        // then
+        verify(article).decreaseCommentCount();
+        verify(commentLikeRepository).deleteAllByComment_User_Id(userId);
+        verify(commentLikeRepository).deleteAllByLikedBy_Id(userId);
+        verify(commentRepository).deleteAll(List.of(activeComment, deletedComment));
+        verify(deletedComment, never()).getArticle();
+    }
 }
