@@ -5,6 +5,7 @@ import com.project.monu.domain.interest.entity.Interest;
 import com.project.monu.domain.interest.entity.Subscription;
 import com.project.monu.domain.interest.repository.SubscriptionRepository;
 import com.project.monu.domain.notification.repository.NotificationRepository;
+import com.project.monu.domain.useractivity.repository.UserActivityMongoRepository;
 import com.project.monu.domain.users.repository.UserRepository;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -22,13 +23,15 @@ class UserPhysicalDeleteServiceTest {
   private final ArticleViewRepository articleViewRepository = mock(ArticleViewRepository.class);
   private final NotificationRepository notificationRepository = mock(NotificationRepository.class);
   private final SubscriptionRepository subscriptionRepository = mock(SubscriptionRepository.class);
+  private final UserActivityMongoRepository userActivityMongoRepository = mock(UserActivityMongoRepository.class);
 
   private final UserPhysicalDeleteService userPhysicalDeleteService =
       new UserPhysicalDeleteService(
           userRepository,
           articleViewRepository,
           notificationRepository,
-          subscriptionRepository
+          subscriptionRepository,
+          userActivityMongoRepository
       );
 
   @Test
@@ -63,5 +66,14 @@ class UserPhysicalDeleteServiceTest {
 
     assertThat(interest.getSubscriberCount()).isEqualTo(0L);
     verify(subscriptionRepository).delete(subscription);
+  }
+
+  @Test
+  void 사용자_물리_삭제시_MongoDB_활동내역을_삭제한다() {
+    UUID userId = UUID.randomUUID();
+
+    userPhysicalDeleteService.hardDelete(userId);
+
+    verify(userActivityMongoRepository).deleteById(userId);
   }
 }
