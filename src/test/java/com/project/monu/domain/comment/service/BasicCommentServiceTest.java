@@ -660,4 +660,25 @@ class BasicCommentServiceTest {
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_LIKE_NOT_FOUND);
     }
+
+    @Test
+    void 댓글을_물리_삭제한다() {
+        // given
+        UUID commentId = UUID.randomUUID();
+
+        Comment comment = mock(Comment.class);
+        Article article = mock(Article.class);
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        when(comment.getDeletedAt()).thenReturn(null);
+        when(comment.getArticle()).thenReturn(article);
+
+        // when
+        commentService.hardDelete(commentId);
+
+        // then
+        verify(commentLikeRepository).deleteAllByComment_IdIn(List.of(commentId));
+        verify(commentRepository).delete(comment);
+        verify(article).decreaseCommentCount();
+    }
 }
