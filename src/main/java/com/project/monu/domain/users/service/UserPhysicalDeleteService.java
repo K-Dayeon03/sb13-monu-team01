@@ -42,5 +42,6 @@ public class UserPhysicalDeleteService {
       subscription.getInterest().decreaseSubscriberCount();
       subscriptionRepository.delete(subscription);
     }
+    userActivityMongoRepository.deleteById(userId);
   }
 }
