@@ -11,4 +11,6 @@ public interface InterestRepository extends JpaRepository<Interest, UUID>, Inter
 
     @Query("select i.name from Interest i")
     List<String> findAllNames();
+
+    List<Interest> findByNameIn(List<String> names);
 }

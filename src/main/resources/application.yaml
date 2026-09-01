@@ -1,36 +1,20 @@
 spring:
+  application:
+    name: sb13-monu-team01
   mongodb:
-    uri: ${MONGODB_URI}
     representation:
       uuid: standard
 
-  application:
-    name: sb13-monu-team01
+  batch:
+    job:
+      enabled: false
 
 logging:
   file:
     path: ${LOG_FILE_PATH:logs}
 
-article:
-  backup:
-    storage: s3
-
-log:
-  archive:
-    storage: ${LOG_ARCHIVE_STORAGE:s3}
-    source-dir: ${LOG_ARCHIVE_SOURCE_DIR:logs}
-    local-destination-dir: ${LOG_ARCHIVE_LOCAL_DESTINATION_DIR:build/log-archives}
-    s3-prefix: ${LOG_ARCHIVE_S3_PREFIX:logs}
-    cron: ${LOG_ARCHIVE_CRON:0 30 2 * * *}
-    zone: ${LOG_ARCHIVE_ZONE:Asia/Seoul}
-    manual-enabled: ${LOG_ARCHIVE_MANUAL_ENABLED:false}
-
-aws:
-  s3:
-    bucket: ${AWS_S3_BUCKET}
-    region: ${AWS_REGION:ap-northeast-2}
-
-naver:
-  api:
-    client-id: ${NAVER_CLIENT_ID}
-    client-secret: ${NAVER_CLIENT_SECRET}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics

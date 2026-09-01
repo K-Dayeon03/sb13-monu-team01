@@ -3,6 +3,7 @@ package com.project.monu.domain.article.backup;
 import com.project.monu.domain.article.entity.Article;
 
 import java.time.Instant;
+import java.util.List;
 
 /**
  * 백업 파일에 기사 1건을 저장할 때 사용하는 데이터 형태입니다.
@@ -17,8 +18,13 @@ public record ArticleBackupRecord(
         String sourceUrl,
         String title,
         Instant publishDate,
-        String summary
+        String summary,
+        List<String> interestNames
 ) {
+
+    public ArticleBackupRecord {
+        interestNames = interestNames == null ? List.of() : List.copyOf(interestNames);
+    }
 
     public static ArticleBackupRecord from(Article article) {
         // Article 엔티티에서 복구에 필요한 값만 뽑아 백업 전용 record로 변환합니다.
@@ -27,7 +33,8 @@ public record ArticleBackupRecord(
                 article.getSourceUrl(),
                 article.getTitle(),
                 article.getPublishDate(),
-                article.getSummary()
+                article.getSummary(),
+                List.of()
         );
     }
 }

@@ -22,6 +22,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -73,6 +74,20 @@ class InterestControllerTest {
                         .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.keywords[0]").value("머신러닝"));
+    }
+
+    @Test
+    @DisplayName("관심사 이름이 비어 있으면 지정한 검증 메시지를 반환한다")
+    void register_returnsBadRequest_whenNameIsBlank() throws Exception {
+        InterestRegisterRequest request = new InterestRegisterRequest("", List.of("AI"));
+
+        mockMvc.perform(post("/api/interests")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details.name").value("관심사 이름을 입력해주세요."));
+
+        verifyNoInteractions(interestService);
     }
 
     @Test

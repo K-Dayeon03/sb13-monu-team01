@@ -44,6 +44,7 @@ GitHub Actions Role 최소 권한 예시:
       "Action": [
         "codedeploy:CreateDeployment",
         "codedeploy:GetApplication",
+        "codedeploy:GetApplicationRevision",
         "codedeploy:GetDeployment",
         "codedeploy:GetDeploymentGroup"
       ],
