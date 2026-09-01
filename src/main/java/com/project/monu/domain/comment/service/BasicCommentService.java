@@ -100,8 +100,18 @@ public class BasicCommentService implements CommentService {
         comment.getArticle().decreaseCommentCount();
     }
 
+    @Transactional
     @Override
     public void hardDelete(UUID commentId) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+        if (comment.getDeletedAt() == null) {
+            comment.getArticle().decreaseCommentCount();
+        }
+
+        commentLikeRepository.deleteAllByComment_IdIn(List.of(commentId));
+        commentRepository.delete(comment);
     }
 
     @Transactional
