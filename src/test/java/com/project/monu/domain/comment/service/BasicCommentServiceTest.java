@@ -653,8 +653,7 @@ class BasicCommentServiceTest {
 
         // when
         BusinessException exception = catchThrowableOfType(
-                BusinessException.class,
-                () -> commentService.unlike(commentId, requestUserId)
+                BusinessException.class, () -> commentService.unlike(commentId, requestUserId)
         );
 
         // then
@@ -680,5 +679,41 @@ class BasicCommentServiceTest {
         verify(commentLikeRepository).deleteAllByComment_IdIn(List.of(commentId));
         verify(commentRepository).delete(comment);
         verify(article).decreaseCommentCount();
+    }
+
+    @Test
+    void 이미_논리_삭제된_댓글을_물리_삭제할때_댓글수는_감소하지_않는다() {
+        // given
+        UUID commentId = UUID.randomUUID();
+
+        Comment comment = mock(Comment.class);
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        when(comment.getDeletedAt()).thenReturn(Instant.parse("2026-08-27T00:00:00Z"));
+
+        // when
+        commentService.hardDelete(commentId);
+
+        // then
+        verify(commentLikeRepository).deleteAllByComment_IdIn(List.of(commentId));
+        verify(commentRepository).delete(comment);
+        verify(comment, never()).getArticle();
+    }
+
+    @Test
+    void 존재하지_않는_댓글은_물리_삭제할수_없다() {
+        // given
+        UUID commentId = UUID.randomUUID();
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.empty());
+
+        // when
+        BusinessException exception = catchThrowableOfType(
+                BusinessException.class, () -> commentService.hardDelete(commentId)
+        );
+
+        // then
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_NOT_FOUND);
+        verifyNoInteractions(commentLikeRepository);
     }
 }
