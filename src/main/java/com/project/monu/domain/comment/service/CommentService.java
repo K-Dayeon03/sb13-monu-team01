@@ -25,7 +25,7 @@ public interface CommentService {
 
     CommentDto update(UUID commentId, UUID requestUserId, CommentUpdateRequest request);
 
-    void delete(UUID commentId, UUID requestUserId);
+    void delete(UUID commentId);
 
     void hardDelete(UUID commentId);
 
