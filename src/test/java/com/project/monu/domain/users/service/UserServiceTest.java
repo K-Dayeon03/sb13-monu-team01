@@ -125,7 +125,7 @@ class UserServiceTest {
         "password123!"
     );
 
-    when(userRepository.findByEmail(request.email()))
+    when(userRepository.findByEmailAndDeletedAtIsNull(request.email()))
         .thenReturn(Optional.of(user));
 
     when(passwordEncoder.matches(
@@ -240,5 +240,99 @@ class UserServiceTest {
     )
         .isInstanceOf(BusinessException.class)
         .hasMessage("사용자 정보 수정 권한이 없습니다.");
+  }
+
+  // 논리 삭제
+  @Test
+  void 사용자가_자신의_계정을_논리_삭제할_수_있다() {
+    UUID userId = UUID.randomUUID();
+
+    User user = User.builder()
+        .email("test@test.com")
+        .nickname("테스트")
+        .password("encoded-password")
+        .build();
+
+    when(userRepository.findByIdAndDeletedAtIsNull(userId))
+        .thenReturn(Optional.of(user));
+
+    when(userRepository.save(user))
+        .thenReturn(user);
+
+    userService.delete(userId, userId);
+
+    assertThat(user.getDeletedAt()).isNotNull();
+    verify(userRepository).save(user);
+  }
+
+  @Test
+  void 존재하지_않는_사용자는_삭제할_수_없다() {
+    UUID userId = UUID.randomUUID();
+
+    when(userRepository.findById(userId))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+        () -> userService.delete(userId, userId)
+    )
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("사용자를 찾을 수 없습니다.");
+  }
+
+  @Test
+  void 다른_사용자의_계정은_삭제할_수_없다() {
+    UUID userId = UUID.randomUUID();
+    UUID requestUserId = UUID.randomUUID();
+
+    assertThatThrownBy(
+        () -> userService.delete(userId, requestUserId)
+    )
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("사용자 삭제 권한이 없습니다.");
+  }
+
+  @Test
+  void 논리_삭제된_사용자는_로그인할_수_없다() {
+    User user = User.builder()
+        .email("deleted@test.com")
+        .nickname("삭제사용자")
+        .password("encoded-password")
+        .build();
+
+    user.delete();
+
+    UserLoginRequest request = new UserLoginRequest(
+        "deleted@test.com",
+        "password123!"
+    );
+
+    when(userRepository.findByEmailAndDeletedAtIsNull(request.email()))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> userService.login(request))
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
+  }
+
+  @Test
+  void 이미_논리_삭제된_사용자는_다시_삭제할_수_없다() {
+    UUID userId = UUID.randomUUID();
+
+    User user = User.builder()
+        .email("deleted@test.com")
+        .nickname("삭제사용자")
+        .password("encoded-password")
+        .build();
+
+    user.delete();
+
+    when(userRepository.findByIdAndDeletedAtIsNull(userId))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+        () -> userService.delete(userId, userId)
+    )
+        .isInstanceOf(BusinessException.class)
+        .hasMessage("사용자를 찾을 수 없습니다.");
   }
 }

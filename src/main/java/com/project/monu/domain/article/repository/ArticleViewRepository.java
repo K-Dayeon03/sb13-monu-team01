@@ -13,6 +13,8 @@ import java.util.UUID;
 public interface ArticleViewRepository extends JpaRepository<ArticleView, UUID> {
 
     void deleteAllByArticle_Id(UUID articleId);
+    // 사용자 물리 삭제를 위한 추가
+    void deleteAllByViewer_Id(UUID userId);
 
     @Query("""
         select count(av) > 0

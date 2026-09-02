@@ -19,4 +19,7 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
             NotificationResourceType resourceType,
             List<UUID> resourceIds
     );
+
+    // User 물리 삭제를 위한 추가
+    void deleteAllByUserId(UUID userId);
 }

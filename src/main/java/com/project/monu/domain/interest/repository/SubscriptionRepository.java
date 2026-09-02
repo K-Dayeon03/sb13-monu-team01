@@ -26,4 +26,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
         where s.interest.id = :interestId
         """)
     List<UUID> findUserIdsByInterestId(@Param("interestId") UUID interestId);
+
+    // User 물리 삭제를 위한 구독자수 줄이기
+    List<Subscription> findAllByUserId(UUID userId);
 }

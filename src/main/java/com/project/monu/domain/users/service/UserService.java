@@ -52,7 +52,7 @@ public class UserService {
 
   public UserResponse login(UserLoginRequest request) {
 
-    User user = userRepository.findByEmail(request.email())
+    User user = userRepository.findByEmailAndDeletedAtIsNull(request.email())
         .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
 
     if (!passwordEncoder.matches(request.password(), user.getPassword())) {
@@ -80,5 +80,19 @@ public class UserService {
     User updatedUser = userRepository.save(user);
 
     return UserResponse.from(updatedUser);
+  }
+
+  public void delete(UUID userId, UUID requestUserId) {
+
+    if (!userId.equals(requestUserId)) {
+      throw new BusinessException(ErrorCode.USER_DELETE_ACCESS_DENIED);
+    }
+
+    User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+    user.delete();
+
+    userRepository.save(user);
   }
 }
