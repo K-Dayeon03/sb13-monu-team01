@@ -6,6 +6,7 @@ import com.project.monu.domain.interest.entity.Subscription;
 import com.project.monu.domain.interest.repository.SubscriptionRepository;
 import com.project.monu.domain.notification.repository.NotificationRepository;
 import com.project.monu.domain.useractivity.repository.UserActivityMongoRepository;
+import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 
 import java.util.List;
@@ -46,7 +47,13 @@ public class UserPhysicalDeleteService {
       subscription.getInterest().decreaseSubscriberCount();
       subscriptionRepository.delete(subscription);
     }
+
     userActivityMongoRepository.deleteById(userId);
     commentService.hardDeleteAllByUserId(userId);
+
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+    userRepository.delete(user);
   }
 }
