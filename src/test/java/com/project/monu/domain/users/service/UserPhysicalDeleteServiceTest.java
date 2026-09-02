@@ -7,8 +7,10 @@ import com.project.monu.domain.interest.entity.Subscription;
 import com.project.monu.domain.interest.repository.SubscriptionRepository;
 import com.project.monu.domain.notification.repository.NotificationRepository;
 import com.project.monu.domain.useractivity.repository.UserActivityMongoRepository;
+import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -87,5 +89,19 @@ class UserPhysicalDeleteServiceTest {
     userPhysicalDeleteService.hardDelete(userId);
 
     verify(commentService).hardDeleteAllByUserId(userId);
+  }
+
+  @Test
+  void 사용자_물리_삭제시_User를_실제로_삭제한다() {
+    UUID userId = UUID.randomUUID();
+
+    User user = mock(User.class);
+
+    when(userRepository.findById(userId))
+        .thenReturn(Optional.of(user));
+
+    userPhysicalDeleteService.hardDelete(userId);
+
+    verify(userRepository).delete(user);
   }
 }
