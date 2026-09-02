@@ -3,11 +3,9 @@ package com.project.monu.domain.useractivity.repository;
 import com.project.monu.domain.comment.dto.CommentDto;
 import com.project.monu.domain.comment.entity.Comment;
 import jakarta.persistence.EntityManager;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Repository;
 
@@ -15,6 +13,7 @@ import org.springframework.stereotype.Repository;
 public class JpaUserActivityCommentRepository implements UserActivityCommentRepository {
 
     private final EntityManager entityManager;
+    private static final int RECENT_ACTIVITY_LIMIT = 10;
 
     public JpaUserActivityCommentRepository(EntityManager entityManager) {
         this.entityManager = entityManager;
@@ -51,6 +50,7 @@ public class JpaUserActivityCommentRepository implements UserActivityCommentRepo
                         order by comment.createdAt desc
                         """, Comment.class)
                 .setParameter("userId", userId)
+                .setMaxResults(RECENT_ACTIVITY_LIMIT)
                 .getResultList();
     }
 

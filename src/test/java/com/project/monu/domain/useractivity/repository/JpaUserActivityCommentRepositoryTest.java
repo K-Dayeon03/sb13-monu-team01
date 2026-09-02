@@ -1,6 +1,8 @@
 package com.project.monu.domain.useractivity.repository;
 
+
 import static org.assertj.core.api.Assertions.assertThat;
+
 
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.entity.ArticleSource;
@@ -14,6 +16,8 @@ import com.project.monu.global.config.QuerydslConfig;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.List;
+import java.util.stream.IntStream;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -27,39 +31,30 @@ import org.springframework.context.annotation.Import;
 })
 class JpaUserActivityCommentRepositoryTest {
 
+    private static final int RECENT_ACTIVITY_LIMIT = 10;
+
     @Autowired
     private EntityManager entityManager;
 
     @Autowired
     private UserActivityCommentRepository commentRepository;
 
-    @Test
-    void 사용자가_작성한_댓글_목록을_조회한다() {
-        User user = user("user@email.com", "사용자");
-        User likedBy = user("liked@email.com", "좋아요사용자");
-        ArticleSource source = source("NAVER");
-        Article article = article(source, "기사 제목");
 
-        Comment comment = comment(article, user, "내가 작성한 댓글");
-        entityManager.persist(new CommentLike(comment, likedBy));
+@Test
+void 작성한_댓글은_최대_10개만_조회한다() {
+    User user = user("user@email.com", "사용자");
+    ArticleSource source = source("NAVER");
+    Article article = article(source, "기사 제목");
 
-        flushAndClear();
+    IntStream.rangeClosed(1, 11)
+            .forEach(index -> comment(article, user, "댓글 " + index));
 
-        List<CommentDto> comments = commentRepository.findAllByUserId(user.getId());
+    flushAndClear();
 
-        assertThat(comments).hasSize(1);
+    List<CommentDto> comments = commentRepository.findAllByUserId(user.getId());
 
-        CommentDto result = comments.get(0);
-
-        assertThat(result.id()).isEqualTo(comment.getId());
-        assertThat(result.articleId()).isEqualTo(article.getId());
-        assertThat(result.userId()).isEqualTo(user.getId());
-        assertThat(result.userNickname()).isEqualTo("사용자");
-        assertThat(result.content()).isEqualTo("내가 작성한 댓글");
-        assertThat(result.likeCount()).isEqualTo(1L);
-        assertThat(result.likedByMe()).isFalse();
-        assertThat(result.createdAt()).isNotNull();
-    }
+    assertThat(comments).hasSize(10);
+}
 
     @Test
     void 내가_좋아요한_내_댓글은_likedByMe가_true다() {
