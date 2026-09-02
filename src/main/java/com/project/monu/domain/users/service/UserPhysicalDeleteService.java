@@ -1,6 +1,7 @@
 package com.project.monu.domain.users.service;
 
 import com.project.monu.domain.article.repository.ArticleViewRepository;
+import com.project.monu.domain.comment.service.CommentService;
 import com.project.monu.domain.interest.entity.Subscription;
 import com.project.monu.domain.interest.repository.SubscriptionRepository;
 import com.project.monu.domain.notification.repository.NotificationRepository;
@@ -17,19 +18,22 @@ public class UserPhysicalDeleteService {
   private final NotificationRepository notificationRepository;
   private final SubscriptionRepository subscriptionRepository;
   private final UserActivityMongoRepository userActivityMongoRepository;
+  private final CommentService commentService;
 
   public UserPhysicalDeleteService(
       UserRepository userRepository,
       ArticleViewRepository articleViewRepository,
       NotificationRepository notificationRepository,
       SubscriptionRepository subscriptionRepository,
-      UserActivityMongoRepository userActivityMongoRepository
+      UserActivityMongoRepository userActivityMongoRepository,
+      CommentService commentService
   ) {
     this.userRepository = userRepository;
     this.articleViewRepository = articleViewRepository;
     this.notificationRepository = notificationRepository;
     this.subscriptionRepository = subscriptionRepository;
     this.userActivityMongoRepository = userActivityMongoRepository;
+    this.commentService = commentService;
   }
 
   public void hardDelete(UUID userId) {

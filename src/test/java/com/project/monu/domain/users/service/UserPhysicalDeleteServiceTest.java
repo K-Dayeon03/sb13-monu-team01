@@ -1,6 +1,7 @@
 package com.project.monu.domain.users.service;
 
 import com.project.monu.domain.article.repository.ArticleViewRepository;
+import com.project.monu.domain.comment.service.CommentService;
 import com.project.monu.domain.interest.entity.Interest;
 import com.project.monu.domain.interest.entity.Subscription;
 import com.project.monu.domain.interest.repository.SubscriptionRepository;
@@ -24,6 +25,7 @@ class UserPhysicalDeleteServiceTest {
   private final NotificationRepository notificationRepository = mock(NotificationRepository.class);
   private final SubscriptionRepository subscriptionRepository = mock(SubscriptionRepository.class);
   private final UserActivityMongoRepository userActivityMongoRepository = mock(UserActivityMongoRepository.class);
+  private final CommentService commentService = mock(CommentService.class);
 
   private final UserPhysicalDeleteService userPhysicalDeleteService =
       new UserPhysicalDeleteService(
@@ -31,7 +33,8 @@ class UserPhysicalDeleteServiceTest {
           articleViewRepository,
           notificationRepository,
           subscriptionRepository,
-          userActivityMongoRepository
+          userActivityMongoRepository,
+          commentService
       );
 
   @Test
@@ -75,5 +78,14 @@ class UserPhysicalDeleteServiceTest {
     userPhysicalDeleteService.hardDelete(userId);
 
     verify(userActivityMongoRepository).deleteById(userId);
+  }
+
+  @Test
+  void 사용자_물리_삭제시_댓글과_댓글좋아요를_삭제한다() {
+    UUID userId = UUID.randomUUID();
+
+    userPhysicalDeleteService.hardDelete(userId);
+
+    verify(commentService).hardDeleteAllByUserId(userId);
   }
 }
