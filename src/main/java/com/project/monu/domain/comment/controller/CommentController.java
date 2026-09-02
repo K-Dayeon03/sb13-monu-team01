@@ -78,6 +78,12 @@ public class CommentController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{commentId}/hard")
+    public ResponseEntity<Void> hardDelete(@PathVariable UUID commentId) {
+        commentService.hardDelete(commentId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/{commentId}/comment-likes")
     public ResponseEntity<CommentLikeDto> like(
             @PathVariable UUID commentId,

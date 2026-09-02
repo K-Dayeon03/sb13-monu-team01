@@ -29,6 +29,8 @@ public interface CommentService {
 
     void hardDelete(UUID commentId);
 
+    void hardDeleteAllByUserId(UUID userId);
+
     CommentLikeDto like(UUID commentId, UUID requestUserId);
 
     void unlike(UUID commentId, UUID requestUserId);
