@@ -20,5 +20,5 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
   Optional<User> findByIdAndDeletedAtIsNull(UUID id);
 
-  List<User> findAllByDeletedAtBefore(Instant cutoff);
+  List<User> findAllByDeletedAtLessThanEqual(Instant cutoff);
 }

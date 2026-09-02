@@ -45,6 +45,7 @@ class UserPhysicalDeleteServiceTest {
   @Test
   void 사용자_물리_삭제시_최근_본_기사_기록을_삭제한다() {
     UUID userId = UUID.randomUUID();
+    givenUserExists(userId);
 
     userPhysicalDeleteService.hardDelete(userId);
 
@@ -54,6 +55,7 @@ class UserPhysicalDeleteServiceTest {
   @Test
   void 사용자_물리_삭제시_알림을_삭제한다() {
     UUID userId = UUID.randomUUID();
+    givenUserExists(userId);
 
     userPhysicalDeleteService.hardDelete(userId);
 
@@ -63,6 +65,7 @@ class UserPhysicalDeleteServiceTest {
   @Test
   void 사용자_물리_삭제시_구독을_삭제하고_관심사_구독자수를_감소시킨다() {
     UUID userId = UUID.randomUUID();
+    givenUserExists(userId);
 
     Interest interest = Interest.create("경제");
     Subscription subscription = Subscription.create(userId, interest);
@@ -79,6 +82,7 @@ class UserPhysicalDeleteServiceTest {
   @Test
   void 사용자_물리_삭제시_MongoDB_활동내역을_삭제한다() {
     UUID userId = UUID.randomUUID();
+    givenUserExists(userId);
 
     userPhysicalDeleteService.hardDelete(userId);
 
@@ -88,6 +92,7 @@ class UserPhysicalDeleteServiceTest {
   @Test
   void 사용자_물리_삭제시_댓글과_댓글좋아요를_삭제한다() {
     UUID userId = UUID.randomUUID();
+    givenUserExists(userId);
 
     userPhysicalDeleteService.hardDelete(userId);
 
@@ -134,5 +139,12 @@ class UserPhysicalDeleteServiceTest {
         .isInstanceOf(BusinessException.class)
         .extracting("errorCode")
         .isEqualTo(ErrorCode.USER_NOT_FOUND);
+  }
+
+  private void givenUserExists(UUID userId) {
+    User user = mock(User.class);
+
+    when(userRepository.findById(userId))
+        .thenReturn(Optional.of(user));
   }
 }

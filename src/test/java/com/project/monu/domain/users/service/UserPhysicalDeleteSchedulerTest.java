@@ -31,12 +31,12 @@ class UserPhysicalDeleteSchedulerTest {
     User user = mock(User.class);
 
     when(user.getId()).thenReturn(userId);
-    when(userRepository.findAllByDeletedAtBefore(any(Instant.class)))
+    when(userRepository.findAllByDeletedAtLessThanEqual(any(Instant.class)))
         .thenReturn(List.of(user));
 
     scheduler.deleteExpiredUsers();
 
-    verify(userRepository).findAllByDeletedAtBefore(any(Instant.class));
+    verify(userRepository).findAllByDeletedAtLessThanEqual(any(Instant.class));
     verify(userPhysicalDeleteService).hardDelete(userId);
   }
 }

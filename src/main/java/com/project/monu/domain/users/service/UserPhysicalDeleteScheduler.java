@@ -18,7 +18,7 @@ public class UserPhysicalDeleteScheduler {
   public void deleteExpiredUsers() {
     Instant cutoff = Instant.now().minus(24, ChronoUnit.HOURS);
 
-    List<User> users = userRepository.findAllByDeletedAtBefore(cutoff);
+    List<User> users = userRepository.findAllByDeletedAtLessThanEqual(cutoff);
 
     for (User user : users) {
       userPhysicalDeleteService.hardDelete(user.getId());
