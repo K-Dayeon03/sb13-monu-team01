@@ -4,7 +4,11 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-
+.DS_Store
+.env
+logs
+backups/
+logs/
 ### STS ###
 .apt_generated
 .classpath
@@ -35,3 +39,4 @@ out/
 
 ### VS Code ###
 .vscode/
+application-postgres.yaml

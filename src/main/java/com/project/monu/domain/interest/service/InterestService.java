@@ -1,0 +1,228 @@
+package com.project.monu.domain.interest.service;
+
+import com.project.monu.domain.article.repository.ArticleInterestRepository;
+import com.project.monu.domain.interest.dto.request.InterestRegisterRequest;
+import com.project.monu.domain.interest.dto.request.InterestSearchCondition;
+import com.project.monu.domain.interest.dto.request.InterestSortType;
+import com.project.monu.domain.interest.dto.request.InterestUpdateRequest;
+import com.project.monu.domain.interest.dto.response.InterestDto;
+import com.project.monu.domain.interest.dto.response.SubscriptionDto;
+import com.project.monu.domain.interest.entity.Interest;
+import com.project.monu.domain.interest.entity.Keyword;
+import com.project.monu.domain.interest.entity.Subscription;
+import com.project.monu.domain.interest.repository.InterestRepository;
+import com.project.monu.domain.interest.repository.SubscriptionRepository;
+import com.project.monu.domain.interest.util.InterestSimilarityCalculator;
+import com.project.monu.global.dto.CursorPageResponse;
+import com.project.monu.global.exception.BusinessException;
+import com.project.monu.global.exception.ErrorCode;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+@Service
+public class InterestService {
+
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final int MAX_PAGE_SIZE = 100;
+
+    private final InterestRepository interestRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final ArticleInterestRepository articleInterestRepository;
+
+    public InterestService(InterestRepository interestRepository, SubscriptionRepository subscriptionRepository, ArticleInterestRepository articleInterestRepository) {
+        this.interestRepository = interestRepository;
+        this.subscriptionRepository = subscriptionRepository;
+        this.articleInterestRepository = articleInterestRepository;
+    }
+
+    @Transactional
+    public InterestDto register(InterestRegisterRequest request) {
+        boolean isDuplicate = interestRepository.findAllNames().stream()
+                .anyMatch(existingName -> InterestSimilarityCalculator.isSimilar(existingName, request.name()));
+
+        if (isDuplicate) {
+            throw new BusinessException(ErrorCode.INTEREST_ALREADY_EXISTS);
+        }
+
+        Interest interest = Interest.create(request.name());
+        request.keywords().forEach(keyword -> interest.addKeyword(Keyword.of(keyword)));
+
+        Interest saved = interestRepository.save(interest);
+
+        return toDto(saved, false);
+    }
+
+    @Transactional
+    public InterestDto update(UUID interestId, InterestUpdateRequest request) {
+        Interest interest = interestRepository.findById(interestId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND));
+
+        interest.updateKeywords(request.keywords());
+
+        return toDto(interest, false);
+    }
+
+    @Transactional
+    public void delete(UUID interestId) {
+        Interest interest = interestRepository.findById(interestId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND));
+
+        subscriptionRepository.deleteAllByInterest_Id(interestId);
+        articleInterestRepository.deleteAllByInterest_Id(interestId);
+        interestRepository.delete(interest);
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPageResponse<InterestDto> getInterests(InterestSearchCondition condition, UUID userId) {
+        int size = normalizeSize(condition.size());
+        InterestSearchCondition normalizedCondition = new InterestSearchCondition(
+                condition.keyword(),
+                condition.sortType(),
+                condition.direction(),
+                condition.nextCursor(),
+                condition.nextAfter(),
+                size
+        );
+
+        List<Interest> interests = interestRepository.searchByCursor(normalizedCondition);
+
+        boolean hasNext = interests.size() > size;
+        if (hasNext) {
+            interests = interests.subList(0, size);
+        }
+
+        Set<UUID> subscribedInterestIds = subscribedInterestIds(userId, interests);
+
+        List<InterestDto> content = interests.stream()
+                .map(interest -> toDto(interest, subscribedInterestIds.contains(interest.getId())))
+                .toList();
+
+        Interest lastInterest = interests.isEmpty() ? null : interests.get(interests.size() - 1);
+
+        return new CursorPageResponse<>(
+                content,
+                hasNext ? createNextCursor(lastInterest, normalizedCondition.sortType()) : null,
+                hasNext ? lastInterest.getCreatedAt() : null,
+                size,
+                interestRepository.countByCondition(normalizedCondition),
+                hasNext
+        );
+    }
+
+    private Set<UUID> subscribedInterestIds(UUID userId, List<Interest> interests) {
+        if (userId == null || interests.isEmpty()) {
+            return new HashSet<>();
+        }
+
+        List<UUID> interestIds = interests.stream().map(Interest::getId).toList();
+        return new HashSet<>(subscriptionRepository.findSubscribedInterestIds(userId, interestIds));
+    }
+
+    @Transactional
+    public SubscriptionDto subscribe(UUID userId, UUID interestId) {
+        Interest interest = interestRepository.findById(interestId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INTEREST_NOT_FOUND));
+
+        if (subscriptionRepository.existsByUserIdAndInterest_Id(userId, interestId)) {
+            throw new BusinessException(ErrorCode.SUBSCRIPTION_ALREADY_EXISTS);
+        }
+
+        Subscription subscription = Subscription.create(userId, interest);
+        Subscription saved;
+        try {
+            // 동시에 같은 사용자가 구독 요청을 중복으로 보내면 위의 existsBy 체크를 둘 다 통과할 수 있어서,
+            // DB 유니크 제약(uk_subscription_user_interest)이 최종 방어선 역할을 한다.
+            // saveAndFlush로 즉시 flush해야 이 시점에 제약 위반이 터져서 여기서 잡을 수 있다.
+            saved = subscriptionRepository.saveAndFlush(subscription);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.SUBSCRIPTION_ALREADY_EXISTS);
+        }
+
+        interest.increaseSubscriberCount();
+        try {
+            // subscriberCount는 여러 요청이 동시에 증감시킬 수 있는 값이라 단순 save로는 lost update가 날 수 있다.
+            // Interest에 @Version을 두고 saveAndFlush로 즉시 flush해서, 그 사이 다른 트랜잭션이 먼저
+            // 커밋했다면 여기서 ObjectOptimisticLockingFailureException으로 걸러낸다.
+            interestRepository.saveAndFlush(interest);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new BusinessException(ErrorCode.INTEREST_CONCURRENT_UPDATE);
+        }
+
+        return toSubscriptionDto(saved);
+    }
+
+    private InterestDto toDto(Interest interest, boolean subscribedByMe) {
+        List<String> keywordNames = interest.getKeywords().stream()
+                .map(Keyword::getKeyword)
+                .toList();
+
+        return new InterestDto(
+                interest.getId(),
+                interest.getName(),
+                keywordNames,
+                interest.getSubscriberCount(),
+                subscribedByMe
+        );
+    }
+
+    private SubscriptionDto toSubscriptionDto(Subscription subscription) {
+        Interest interest = subscription.getInterest();
+        List<String> keywordNames = interest.getKeywords().stream()
+                .map(Keyword::getKeyword)
+                .toList();
+
+        return new SubscriptionDto(
+                subscription.getId(),
+                interest.getId(),
+                interest.getName(),
+                keywordNames,
+                interest.getSubscriberCount(),
+                subscription.getCreatedAt()
+        );
+    }
+
+    private String createNextCursor(Interest interest, InterestSortType sortType) {
+        if (interest == null) {
+            return null;
+        }
+
+        InterestSortType resolvedSortType = sortType == null
+                ? InterestSortType.SUBSCRIBER_COUNT
+                : sortType;
+
+        return switch (resolvedSortType) {
+            case SUBSCRIBER_COUNT -> interest.getSubscriberCount() + "_" + interest.getId();
+            case NAME -> interest.getName() + "_" + interest.getId();
+        };
+    }
+
+    private int normalizeSize(int requestedSize) {
+        if (requestedSize <= 0) {
+            return DEFAULT_PAGE_SIZE;
+        }
+        return Math.min(requestedSize, MAX_PAGE_SIZE);
+    }
+
+    @Transactional
+    public void unsubscribe(UUID userId, UUID interestId) {
+        Subscription subscription = subscriptionRepository.findByUserIdAndInterest_Id(userId, interestId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+
+        Interest interest = subscription.getInterest();
+        subscriptionRepository.delete(subscription);
+        interest.decreaseSubscriberCount();
+        try {
+            interestRepository.saveAndFlush(interest);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new BusinessException(ErrorCode.INTEREST_CONCURRENT_UPDATE);
+        }
+    }
+
+}

@@ -1,0 +1,61 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations:
+        - classpath:org/springframework/batch/core/schema-postgresql.sql
+      data-locations:
+        - classpath:init-data.sql
+      continue-on-error: true
+
+  mongodb:
+    uri: ${MONGODB_URI}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        format_sql: false
+    show-sql: false
+
+batch:
+  enabled: ${BATCH_ENABLED:true}
+  manual:
+    secret: ${BATCH_MANUAL_SECRET}
+  scheduler:
+    enabled: ${BATCH_SCHEDULER_ENABLED:true}
+
+article:
+  backup:
+    storage: s3
+
+log:
+  archive:
+    storage: ${LOG_ARCHIVE_STORAGE:s3}
+    source-dir: ${LOG_ARCHIVE_SOURCE_DIR:logs}
+    local-destination-dir: ${LOG_ARCHIVE_LOCAL_DESTINATION_DIR:build/log-archives}
+    s3-prefix: ${LOG_ARCHIVE_S3_PREFIX:logs}
+    cron: ${LOG_ARCHIVE_CRON:0 30 2 * * *}
+    zone: ${LOG_ARCHIVE_ZONE:Asia/Seoul}
+    manual-enabled: ${LOG_ARCHIVE_MANUAL_ENABLED:false}
+
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET}
+    region: ${AWS_REGION:ap-northeast-2}
+
+naver:
+  api:
+    client-id: ${NAVER_CLIENT_ID}
+    client-secret: ${NAVER_CLIENT_SECRET}
