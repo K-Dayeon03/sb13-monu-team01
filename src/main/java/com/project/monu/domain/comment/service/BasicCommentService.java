@@ -77,14 +77,18 @@ public class BasicCommentService implements CommentService {
 
         comment.updateContent(request.content());
 
+        long likeCount = commentLikeRepository.countByComment_Id(commentId);
+        boolean likedByMe = commentLikeRepository
+                .existsByComment_IdAndLikedBy_Id(commentId, requestUserId);
+
         return new CommentDto(
                 comment.getId(),
                 comment.getArticle().getId(),
                 comment.getUser().getId(),
                 comment.getUser().getNickname(),
                 comment.getContent(),
-                0L,
-                false,
+                likeCount,
+                likedByMe,
                 comment.getCreatedAt()
         );
     }
