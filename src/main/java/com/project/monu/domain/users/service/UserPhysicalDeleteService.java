@@ -47,5 +47,6 @@ public class UserPhysicalDeleteService {
       subscriptionRepository.delete(subscription);
     }
     userActivityMongoRepository.deleteById(userId);
+    commentService.hardDeleteAllByUserId(userId);
   }
 }
