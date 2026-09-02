@@ -70,8 +70,7 @@ public class UserPhysicalDeleteService {
     userActivityMongoRepository.deleteById(userId);
     commentService.hardDeleteAllByUserId(userId);
 
-    User user = userRepository.findById(userId)
-        .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+    User user = userRepository.findById(userId).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
     userRepository.delete(user);
   }
