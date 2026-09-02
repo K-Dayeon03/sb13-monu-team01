@@ -1,18 +1,18 @@
 package com.project.monu.domain.useractivity.repository;
 
-import com.project.monu.domain.comment.dto.CommentDto;
 import com.project.monu.domain.comment.entity.Comment;
+import com.project.monu.domain.useractivity.dto.UserActivityCommentResponse;
 import jakarta.persistence.EntityManager;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class JpaUserActivityCommentRepository implements UserActivityCommentRepository {
+
+    private static final int RECENT_ACTIVITY_LIMIT = 10;
 
     private final EntityManager entityManager;
 
@@ -21,7 +21,7 @@ public class JpaUserActivityCommentRepository implements UserActivityCommentRepo
     }
 
     @Override
-    public List<CommentDto> findAllByUserId(UUID userId) {
+    public List<UserActivityCommentResponse> findAllByUserId(UUID userId) {
         List<Comment> comments = findComments(userId);
 
         if (comments.isEmpty()) {
@@ -36,7 +36,7 @@ public class JpaUserActivityCommentRepository implements UserActivityCommentRepo
         List<UUID> likedCommentIds = findLikedCommentIds(userId, commentIds);
 
         return comments.stream()
-                .map(comment -> toCommentDto(comment, likeCounts, likedCommentIds))
+                .map(comment -> toResponse(comment, likeCounts, likedCommentIds))
                 .toList();
     }
 
@@ -51,6 +51,7 @@ public class JpaUserActivityCommentRepository implements UserActivityCommentRepo
                         order by comment.createdAt desc
                         """, Comment.class)
                 .setParameter("userId", userId)
+                .setMaxResults(RECENT_ACTIVITY_LIMIT)
                 .getResultList();
     }
 
@@ -86,16 +87,17 @@ public class JpaUserActivityCommentRepository implements UserActivityCommentRepo
                 .getResultList();
     }
 
-    private CommentDto toCommentDto(
+    private UserActivityCommentResponse toResponse(
             Comment comment,
             Map<UUID, Long> likeCounts,
             List<UUID> likedCommentIds
     ) {
         UUID commentId = comment.getId();
 
-        return new CommentDto(
+        return new UserActivityCommentResponse(
                 commentId,
                 comment.getArticle().getId(),
+                comment.getArticle().getTitle(),
                 comment.getUser().getId(),
                 comment.getUser().getNickname(),
                 comment.getContent(),

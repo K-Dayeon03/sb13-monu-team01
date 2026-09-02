@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 public class JpaUserActivityCommentLikeRepository implements UserActivityCommentLikeRepository {
 
     private final EntityManager entityManager;
+    private static final int RECENT_ACTIVITY_LIMIT = 10;
 
     public JpaUserActivityCommentLikeRepository(EntityManager entityManager) {
         this.entityManager = entityManager;
@@ -51,6 +52,7 @@ public class JpaUserActivityCommentLikeRepository implements UserActivityComment
                         order by commentLike.createdAt desc
                         """, CommentLike.class)
                 .setParameter("userId", userId)
+                .setMaxResults(RECENT_ACTIVITY_LIMIT)
                 .getResultList();
     }
 

@@ -3,9 +3,9 @@ package com.project.monu.domain.useractivity.document;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.project.monu.domain.article.dto.response.ArticleViewDto;
-import com.project.monu.domain.comment.dto.CommentDto;
 import com.project.monu.domain.interest.dto.response.SubscriptionDto;
 import com.project.monu.domain.useractivity.dto.UserActivityCommentLikeResponse;
+import com.project.monu.domain.useractivity.dto.UserActivityCommentResponse;
 import com.project.monu.domain.useractivity.dto.UserActivityResponse;
 import java.time.Instant;
 import java.util.List;
@@ -54,6 +54,7 @@ class UserActivityDocumentTest {
         assertThat(result.subscriptions().get(0).interestName()).isEqualTo("경제");
         assertThat(result.subscriptions().get(0).interestKeywords())
                 .containsExactly("금리", "환율");
+        assertThat(result.comments().get(0).articleTitle()).isEqualTo("댓글을 작성한 기사");
         assertThat(result.comments().get(0).content()).isEqualTo("내가 작성한 댓글");
         assertThat(result.commentLikes().get(0).commentContent()).isEqualTo("좋아요한 댓글");
         assertThat(result.articleViews().get(0).articleTitle()).isEqualTo("조회한 기사 제목");
@@ -80,9 +81,10 @@ class UserActivityDocumentTest {
                 Instant.parse("2026-08-28T01:00:00Z")
         );
 
-        CommentDto comment = new CommentDto(
+        UserActivityCommentResponse comment = new UserActivityCommentResponse(
                 commentId,
                 commentArticleId,
+                "댓글을 작성한 기사",
                 userId,
                 "사용자",
                 "내가 작성한 댓글",

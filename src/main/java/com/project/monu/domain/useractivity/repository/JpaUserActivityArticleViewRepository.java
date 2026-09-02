@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 public class JpaUserActivityArticleViewRepository implements UserActivityArticleViewRepository {
 
     private final EntityManager entityManager;
+    private static final int RECENT_ACTIVITY_LIMIT = 10;
 
     public JpaUserActivityArticleViewRepository(EntityManager entityManager) {
         this.entityManager = entityManager;
@@ -29,6 +30,7 @@ public class JpaUserActivityArticleViewRepository implements UserActivityArticle
                         order by articleView.createdAt desc
                         """, ArticleView.class)
                 .setParameter("userId", userId)
+                .setMaxResults(RECENT_ACTIVITY_LIMIT)
                 .getResultList()
                 .stream()
                 .map(ArticleViewDto::from)

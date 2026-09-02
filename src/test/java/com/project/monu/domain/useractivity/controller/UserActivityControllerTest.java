@@ -7,9 +7,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.project.monu.domain.article.dto.response.ArticleViewDto;
-import com.project.monu.domain.comment.dto.CommentDto;
 import com.project.monu.domain.interest.dto.response.SubscriptionDto;
 import com.project.monu.domain.useractivity.dto.UserActivityCommentLikeResponse;
+import com.project.monu.domain.useractivity.dto.UserActivityCommentResponse;
 import com.project.monu.domain.useractivity.dto.UserActivityResponse;
 import com.project.monu.domain.useractivity.service.UserActivityService;
 import java.time.Instant;
@@ -63,9 +63,10 @@ class UserActivityControllerTest {
                 subscribedAt
         );
 
-        CommentDto comment = new CommentDto(
+        UserActivityCommentResponse comment = new UserActivityCommentResponse(
                 commentId,
                 commentArticleId,
+                "댓글을 작성한 기사",
                 userId,
                 "사용자",
                 "내가 작성한 댓글",
@@ -132,6 +133,7 @@ class UserActivityControllerTest {
 
                 .andExpect(jsonPath("$.comments[0].id").value(commentId.toString()))
                 .andExpect(jsonPath("$.comments[0].articleId").value(commentArticleId.toString()))
+                .andExpect(jsonPath("$.comments[0].articleTitle").value("댓글을 작성한 기사"))
                 .andExpect(jsonPath("$.comments[0].userId").value(userId.toString()))
                 .andExpect(jsonPath("$.comments[0].userNickname").value("사용자"))
                 .andExpect(jsonPath("$.comments[0].content").value("내가 작성한 댓글"))

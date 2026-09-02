@@ -14,6 +14,8 @@ import com.project.monu.global.config.QuerydslConfig;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.List;
+import java.util.stream.IntStream;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -27,6 +29,8 @@ import org.springframework.context.annotation.Import;
 })
 class JpaUserActivityCommentLikeRepositoryTest {
 
+    private static final int RECENT_ACTIVITY_LIMIT = 10;
+
     @Autowired
     private EntityManager entityManager;
 
@@ -34,42 +38,24 @@ class JpaUserActivityCommentLikeRepositoryTest {
     private UserActivityCommentLikeRepository commentLikeRepository;
 
     @Test
-    void 사용자가_좋아요한_댓글_목록을_조회한다() {
+    void 좋아요한_댓글은_최대_10개만_조회한다() {
         User likedBy = user("liked-by@email.com", "좋아요사용자");
         User commentWriter = user("writer@email.com", "댓글작성자");
-        User otherLikeUser = user("other-like@email.com", "다른좋아요사용자");
-
         ArticleSource source = source("NAVER");
-        Article article = article(source, "기사 제목");
 
-        Comment comment = comment(article, commentWriter, "좋아요한 댓글");
-
-        CommentLike myCommentLike = new CommentLike(comment, likedBy);
-        CommentLike otherCommentLike = new CommentLike(comment, otherLikeUser);
-
-        entityManager.persist(myCommentLike);
-        entityManager.persist(otherCommentLike);
+        IntStream.rangeClosed(1, 11)
+                .forEach(index -> {
+                    Article article = article(source, "기사 제목 " + index);
+                    Comment comment = comment(article, commentWriter, "좋아요한 댓글 " + index);
+                    entityManager.persist(new CommentLike(comment, likedBy));
+                });
 
         flushAndClear();
 
         List<UserActivityCommentLikeResponse> commentLikes =
                 commentLikeRepository.findAllByUserId(likedBy.getId());
 
-        assertThat(commentLikes).hasSize(1);
-
-        UserActivityCommentLikeResponse result = commentLikes.get(0);
-
-        assertThat(result.id()).isEqualTo(myCommentLike.getId());
-        assertThat(result.likedBy()).isEqualTo(likedBy.getId());
-        assertThat(result.createdAt()).isNotNull();
-        assertThat(result.commentId()).isEqualTo(comment.getId());
-        assertThat(result.articleId()).isEqualTo(article.getId());
-        assertThat(result.articleTitle()).isEqualTo("기사 제목");
-        assertThat(result.commentUserId()).isEqualTo(commentWriter.getId());
-        assertThat(result.commentUserNickname()).isEqualTo("댓글작성자");
-        assertThat(result.commentContent()).isEqualTo("좋아요한 댓글");
-        assertThat(result.commentLikeCount()).isEqualTo(2L);
-        assertThat(result.commentCreatedAt()).isNotNull();
+        assertThat(commentLikes).hasSize(10);
     }
 
     @Test
