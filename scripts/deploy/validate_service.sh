@@ -21,7 +21,7 @@ print_service_logs() {
 }
 
 for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
-  if ! systemctl is-active --quiet monu.service; then
+  if command -v systemctl >/dev/null 2>&1 && ! systemctl is-active --quiet monu.service; then
     echo "monu.service is not active during health check."
     print_service_logs
     exit 1

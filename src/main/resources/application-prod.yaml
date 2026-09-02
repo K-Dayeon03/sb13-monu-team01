@@ -31,6 +31,8 @@ spring:
 
 batch:
   enabled: ${BATCH_ENABLED:true}
+  manual:
+    secret: ${BATCH_MANUAL_SECRET}
   scheduler:
     enabled: ${BATCH_SCHEDULER_ENABLED:true}
 

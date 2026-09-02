@@ -26,6 +26,7 @@ spring:
       # 로컬 테스트 편의를 위해 엔티티 기준으로 테이블을 자동 반영합니다.
       # 운영 환경에서는 validate 또는 마이그레이션 도구 사용을 권장합니다.
       ddl-auto: update
+    defer-datasource-initialization: true
     properties:
       hibernate:
         format_sql: true
@@ -40,18 +41,18 @@ spring:
       # Spring Boot 4.1에서는 spring.batch.jdbc.initialize-schema가 설정 메타데이터에 없습니다.
       # 그래서 사용하는 DB에 맞는 Spring Batch schema SQL을 직접 실행합니다.
       mode: always
-      schema-locations:
-        - classpath:org/springframework/batch/core/schema-postgresql.sql
-      # 팀원 PC에서 이미 BATCH_* 테이블이 만들어져 있어도 로컬 서버가 뜨도록 중복 생성 오류는 넘깁니다.
-      data-locations:
-        - classpath:init-data.sql
+      schema-locations: classpath:org/springframework/batch/core/schema-${DB_SCHEMA_PLATFORM:h2}.sql
+      data-locations: classpath:init-data.sql
+      # 로컬 DB나 PostgreSQL에 이미 BATCH_* 테이블이 만들어져 있어도 서버가 뜨도록 중복 생성 오류는 넘깁니다.
       continue-on-error: true
 
 batch:
   enabled: true
+  manual:
+    secret: ${BATCH_MANUAL_SECRET:local-batch-secret}
   scheduler:
     # 수동 테스트 중에는 스케줄러가 자동으로 돌지 않게 꺼둡니다.
-    enabled: ${BATCH_SCHEDULER_ENABLED:false}
+    enabled: false
 
 article:
   backup:
@@ -67,3 +68,9 @@ log:
     cron: ${LOG_ARCHIVE_CRON:0 30 2 * * *}
     zone: ${LOG_ARCHIVE_ZONE:Asia/Seoul}
     manual-enabled: true
+
+naver:
+  api:
+    # 백업 배치만 테스트할 때는 실제 Naver API 키가 필요 없어서 기본 테스트 값을 둡니다.
+    client-id: ${NAVER_CLIENT_ID:test-client-id}
+    client-secret: ${NAVER_CLIENT_SECRET:test-client-secret}

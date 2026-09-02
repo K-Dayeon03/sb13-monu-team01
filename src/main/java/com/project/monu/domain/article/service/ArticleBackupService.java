@@ -8,10 +8,14 @@ import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.entity.ArticleBackup;
 import com.project.monu.domain.article.entity.ArticleRestore;
 import com.project.monu.domain.article.entity.ArticleSource;
+import com.project.monu.domain.article.entity.ArticleInterest;
 import com.project.monu.domain.article.repository.ArticleBackupRepository;
+import com.project.monu.domain.article.repository.ArticleInterestRepository;
 import com.project.monu.domain.article.repository.ArticleRepository;
 import com.project.monu.domain.article.repository.ArticleRestoreRepository;
 import com.project.monu.domain.article.repository.ArticleSourceRepository;
+import com.project.monu.domain.interest.entity.Interest;
+import com.project.monu.domain.interest.repository.InterestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,8 +43,10 @@ public class ArticleBackupService {
 
     private final ArticleRepository articleRepository;
     private final ArticleSourceRepository articleSourceRepository;
+    private final ArticleInterestRepository articleInterestRepository;
     private final ArticleBackupRepository articleBackupRepository;
     private final ArticleRestoreRepository articleRestoreRepository;
+    private final InterestRepository interestRepository;
     private final ArticleBackupStorage backupStorage;
 
     // ArticleBackupRecord 객체를 JSON 문자열로 쓰고, JSON 문자열을 다시 객체로 읽기 위한 변환기입니다.
@@ -64,7 +70,7 @@ public class ArticleBackupService {
 
         // 백업 파일은 JSONL 형식입니다. 기사 1건을 JSON 1줄로 저장해 복구 시 줄 단위로 읽습니다.
         String content = articles.stream()
-                .map(ArticleBackupRecord::from)
+                .map(this::toBackupRecord)
                 .map(this::toJson)
                 .collect(Collectors.joining(System.lineSeparator()));
 
@@ -160,6 +166,7 @@ public class ArticleBackupService {
 
             Article savedArticle = articleRepository.save(restoredArticle);
             restoredArticleIds.add(savedArticle.getId());
+            restoreArticleInterests(savedArticle, record.interestNames());
         }
 
         // 실제로 복구된 기사가 0건이어도 복구 작업을 수행했다는 사실은 이력으로 남깁니다.
@@ -176,6 +183,37 @@ public class ArticleBackupService {
 
     private String backupKey(LocalDate date) {
         return BACKUP_PREFIX + date + ".jsonl";
+    }
+
+    private ArticleBackupRecord toBackupRecord(Article article) {
+        List<String> interestNames = articleInterestRepository.findByArticle_Id(article.getId()).stream()
+                .map(articleInterest -> articleInterest.getInterest().getName())
+                .toList();
+
+        return new ArticleBackupRecord(
+                article.getSource().getName(),
+                article.getSourceUrl(),
+                article.getTitle(),
+                article.getPublishDate(),
+                article.getSummary(),
+                interestNames
+        );
+    }
+
+    private void restoreArticleInterests(Article article, List<String> interestNames) {
+        if (interestNames == null || interestNames.isEmpty()) {
+            return;
+        }
+
+        List<Interest> interests = interestRepository.findByNameIn(interestNames);
+        List<ArticleInterest> articleInterests = interests.stream()
+                .map(interest -> ArticleInterest.builder()
+                        .article(article)
+                        .interest(interest)
+                        .build())
+                .toList();
+
+        articleInterestRepository.saveAll(articleInterests);
     }
 
     private String toJson(ArticleBackupRecord record) {

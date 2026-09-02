@@ -203,7 +203,8 @@ class CommentControllerTest {
         mockMvc.perform(post("/api/comments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details.content").value("댓글 내용을 입력해주세요."));
 
         verifyNoInteractions(commentService);
     }
@@ -263,5 +264,17 @@ class CommentControllerTest {
                 .andExpect(status().isOk());
 
         verify(commentService).unlike(commentId, requestUserId);
+    }
+
+    @Test
+    void 댓글을_물리_삭제한다() throws Exception {
+        // given
+        UUID commentId = UUID.randomUUID();
+
+        // when & then
+        mockMvc.perform(delete("/api/comments/{commentId}/hard", commentId))
+                .andExpect(status().isNoContent());
+
+        verify(commentService).hardDelete(commentId);
     }
 }

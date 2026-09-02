@@ -14,11 +14,13 @@ import com.project.monu.domain.comment.exception.InvalidCommentSortDirectionExce
 import com.project.monu.domain.comment.repository.CommentLikeRepository;
 import com.project.monu.domain.comment.repository.CommentQueryResult;
 import com.project.monu.domain.comment.repository.CommentRepository;
+import com.project.monu.domain.notification.event.CommentLikedEvent;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.dto.CursorPageResponse;
 import com.project.monu.global.exception.BusinessException;
 import com.project.monu.global.exception.ErrorCode;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,7 @@ public class BasicCommentService implements CommentService {
     private final CommentLikeRepository commentLikeRepository;
     private final ArticleRepository articleRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     @Override
@@ -100,8 +103,32 @@ public class BasicCommentService implements CommentService {
         comment.getArticle().decreaseCommentCount();
     }
 
+    @Transactional
     @Override
     public void hardDelete(UUID commentId) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+        if (comment.getDeletedAt() == null) {
+            comment.getArticle().decreaseCommentCount();
+        }
+
+        commentLikeRepository.deleteAllByComment_Id(commentId);
+        commentRepository.delete(comment);
+    }
+
+    @Transactional
+    @Override
+    public void hardDeleteAllByUserId(UUID userId) {
+        List<Comment> comments = commentRepository.findAllByUser_Id(userId);
+
+        comments.stream()
+                .filter(comment -> comment.getDeletedAt() == null)
+                .forEach(comment -> comment.getArticle().decreaseCommentCount());
+
+        commentLikeRepository.deleteAllByComment_User_Id(userId);
+        commentLikeRepository.deleteAllByLikedBy_Id(userId);
+        commentRepository.deleteAll(comments);
     }
 
     @Transactional
@@ -112,7 +139,7 @@ public class BasicCommentService implements CommentService {
         User user = userRepository.findById(requestUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // 중복검사
+        // 중복 검사
         if (commentLikeRepository.existsByComment_IdAndLikedBy_Id(commentId, requestUserId)) {
             throw new BusinessException(ErrorCode.COMMENT_LIKE_ALREADY_EXISTS);
         }
@@ -121,6 +148,13 @@ public class BasicCommentService implements CommentService {
         CommentLike savedLike = commentLikeRepository.save(commentLike);
 
         long likeCount = commentLikeRepository.countByComment_Id(commentId);
+
+        eventPublisher.publishEvent(new CommentLikedEvent(
+                comment.getUser().getId(),
+                requestUserId,
+                user.getNickname(),
+                commentId
+        ));
 
         return new CommentLikeDto(
                 savedLike.getId(),
