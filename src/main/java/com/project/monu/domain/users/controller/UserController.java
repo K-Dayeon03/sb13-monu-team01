@@ -4,6 +4,7 @@ import com.project.monu.domain.users.dto.request.UserCreateRequest;
 import com.project.monu.domain.users.dto.request.UserLoginRequest;
 import com.project.monu.domain.users.dto.request.UserUpdateRequest;
 import com.project.monu.domain.users.dto.response.UserResponse;
+import com.project.monu.domain.users.service.UserPhysicalDeleteService;
 import com.project.monu.domain.users.service.UserService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -17,9 +18,14 @@ public class UserController {
   private static final String USER_ID_HEADER = "Monew-Request-User-ID";
 
   private final UserService userService;
+  private final UserPhysicalDeleteService userPhysicalDeleteService;
 
-  public UserController(UserService userService) {
+  public UserController(
+      UserService userService,
+      UserPhysicalDeleteService userPhysicalDeleteService
+  ) {
     this.userService = userService;
+    this.userPhysicalDeleteService = userPhysicalDeleteService;
   }
 
   @PostMapping
@@ -57,5 +63,14 @@ public class UserController {
     UUID requester = requestUserId != null ? requestUserId : userId;
 
     userService.delete(userId, requester);
+  }
+
+  @DeleteMapping("/{userId}/hard")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void hardDelete(
+      @PathVariable UUID userId,
+      @RequestHeader(USER_ID_HEADER) UUID requestUserId
+  ) {
+    userPhysicalDeleteService.hardDelete(userId, requestUserId);
   }
 }
