@@ -1,15 +1,13 @@
 package com.project.monu.domain.useractivity.repository;
 
-
 import static org.assertj.core.api.Assertions.assertThat;
-
 
 import com.project.monu.domain.article.entity.Article;
 import com.project.monu.domain.article.entity.ArticleSource;
 import com.project.monu.domain.article.entity.SourceType;
-import com.project.monu.domain.comment.dto.CommentDto;
 import com.project.monu.domain.comment.entity.Comment;
 import com.project.monu.domain.comment.entity.CommentLike;
+import com.project.monu.domain.useractivity.dto.UserActivityCommentResponse;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.global.config.JpaAuditingConfig;
 import com.project.monu.global.config.QuerydslConfig;
@@ -17,7 +15,6 @@ import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.IntStream;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -39,22 +36,37 @@ class JpaUserActivityCommentRepositoryTest {
     @Autowired
     private UserActivityCommentRepository commentRepository;
 
+    @Test
+    void 작성한_댓글은_최대_10개만_조회한다() {
+        User user = user("user@email.com", "사용자");
+        ArticleSource source = source("NAVER");
+        Article article = article(source, "기사 제목");
 
-@Test
-void 작성한_댓글은_최대_10개만_조회한다() {
-    User user = user("user@email.com", "사용자");
-    ArticleSource source = source("NAVER");
-    Article article = article(source, "기사 제목");
+        IntStream.rangeClosed(1, RECENT_ACTIVITY_LIMIT + 1)
+                .forEach(index -> comment(article, user, "댓글 " + index));
 
-    IntStream.rangeClosed(1, 11)
-            .forEach(index -> comment(article, user, "댓글 " + index));
+        flushAndClear();
 
-    flushAndClear();
+        List<UserActivityCommentResponse> comments = commentRepository.findAllByUserId(user.getId());
 
-    List<CommentDto> comments = commentRepository.findAllByUserId(user.getId());
+        assertThat(comments).hasSize(RECENT_ACTIVITY_LIMIT);
+    }
 
-    assertThat(comments).hasSize(10);
-}
+    @Test
+    void 작성한_댓글은_기사_제목을_함께_조회한다() {
+        User user = user("user@email.com", "사용자");
+        ArticleSource source = source("NAVER");
+        Article article = article(source, "댓글을 작성한 기사");
+
+        comment(article, user, "내가 작성한 댓글");
+
+        flushAndClear();
+
+        List<UserActivityCommentResponse> comments = commentRepository.findAllByUserId(user.getId());
+
+        assertThat(comments).hasSize(1);
+        assertThat(comments.get(0).articleTitle()).isEqualTo("댓글을 작성한 기사");
+    }
 
     @Test
     void 내가_좋아요한_내_댓글은_likedByMe가_true다() {
@@ -67,7 +79,7 @@ void 작성한_댓글은_최대_10개만_조회한다() {
 
         flushAndClear();
 
-        List<CommentDto> comments = commentRepository.findAllByUserId(user.getId());
+        List<UserActivityCommentResponse> comments = commentRepository.findAllByUserId(user.getId());
 
         assertThat(comments).hasSize(1);
         assertThat(comments.get(0).likedByMe()).isTrue();
@@ -85,7 +97,7 @@ void 작성한_댓글은_최대_10개만_조회한다() {
 
         flushAndClear();
 
-        List<CommentDto> comments = commentRepository.findAllByUserId(requestUser.getId());
+        List<UserActivityCommentResponse> comments = commentRepository.findAllByUserId(requestUser.getId());
 
         assertThat(comments).isEmpty();
     }
@@ -101,7 +113,7 @@ void 작성한_댓글은_최대_10개만_조회한다() {
 
         flushAndClear();
 
-        List<CommentDto> comments = commentRepository.findAllByUserId(user.getId());
+        List<UserActivityCommentResponse> comments = commentRepository.findAllByUserId(user.getId());
 
         assertThat(comments).isEmpty();
     }

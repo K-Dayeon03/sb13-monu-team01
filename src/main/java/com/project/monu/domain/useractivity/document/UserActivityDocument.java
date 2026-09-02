@@ -1,9 +1,9 @@
 package com.project.monu.domain.useractivity.document;
 
 import com.project.monu.domain.article.dto.response.ArticleViewDto;
-import com.project.monu.domain.comment.dto.CommentDto;
 import com.project.monu.domain.interest.dto.response.SubscriptionDto;
 import com.project.monu.domain.useractivity.dto.UserActivityCommentLikeResponse;
+import com.project.monu.domain.useractivity.dto.UserActivityCommentResponse;
 import com.project.monu.domain.useractivity.dto.UserActivityResponse;
 import java.time.Instant;
 import java.util.List;
@@ -21,7 +21,7 @@ public class UserActivityDocument {
     private String nickname;
     private Instant createdAt;
     private List<SubscriptionDto> subscriptions;
-    private List<CommentDto> comments;
+    private List<UserActivityCommentResponse> comments;
     private List<UserActivityCommentLikeResponse> commentLikes;
     private List<ArticleViewDto> articleViews;
     private Instant updatedAt;
@@ -35,7 +35,7 @@ public class UserActivityDocument {
             String nickname,
             Instant createdAt,
             List<SubscriptionDto> subscriptions,
-            List<CommentDto> comments,
+            List<UserActivityCommentResponse> comments,
             List<UserActivityCommentLikeResponse> commentLikes,
             List<ArticleViewDto> articleViews,
             Instant updatedAt

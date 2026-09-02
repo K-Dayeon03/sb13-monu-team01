@@ -1,10 +1,10 @@
 package com.project.monu.domain.useractivity.service;
 
 import com.project.monu.domain.article.dto.response.ArticleViewDto;
-import com.project.monu.domain.comment.dto.CommentDto;
 import com.project.monu.domain.interest.dto.response.SubscriptionDto;
 import com.project.monu.domain.useractivity.document.UserActivityDocument;
 import com.project.monu.domain.useractivity.dto.UserActivityCommentLikeResponse;
+import com.project.monu.domain.useractivity.dto.UserActivityCommentResponse;
 import com.project.monu.domain.useractivity.dto.UserActivityResponse;
 import com.project.monu.domain.useractivity.repository.UserActivityArticleViewRepository;
 import com.project.monu.domain.useractivity.repository.UserActivityCommentLikeRepository;
@@ -15,7 +15,6 @@ import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.exception.BusinessException;
 import com.project.monu.global.exception.ErrorCode;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -66,7 +65,7 @@ public class BasicUserActivityService implements UserActivityService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         List<SubscriptionDto> subscriptions = subscriptionRepository.findAllByUserId(userId);
-        List<CommentDto> comments = commentRepository.findAllByUserId(userId);
+        List<UserActivityCommentResponse> comments = commentRepository.findAllByUserId(userId);
         List<UserActivityCommentLikeResponse> commentLikes =
                 commentLikeRepository.findAllByUserId(userId);
         List<ArticleViewDto> articleViews = articleViewRepository.findAllByUserId(userId);

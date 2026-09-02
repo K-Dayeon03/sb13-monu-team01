@@ -1,10 +1,10 @@
 package com.project.monu.domain.useractivity.repository;
 
-import com.project.monu.domain.comment.dto.CommentDto;
+import com.project.monu.domain.useractivity.dto.UserActivityCommentResponse;
 import java.util.List;
 import java.util.UUID;
 
 public interface UserActivityCommentRepository {
 
-    List<CommentDto> findAllByUserId(UUID userId);
+    List<UserActivityCommentResponse> findAllByUserId(UUID userId);
 }

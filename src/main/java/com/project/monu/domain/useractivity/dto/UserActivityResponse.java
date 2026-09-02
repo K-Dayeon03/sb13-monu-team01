@@ -1,7 +1,6 @@
 package com.project.monu.domain.useractivity.dto;
 
 import com.project.monu.domain.article.dto.response.ArticleViewDto;
-import com.project.monu.domain.comment.dto.CommentDto;
 import com.project.monu.domain.interest.dto.response.SubscriptionDto;
 import java.time.Instant;
 import java.util.List;
@@ -13,7 +12,7 @@ public record UserActivityResponse(
         String nickname,
         Instant createdAt,
         List<SubscriptionDto> subscriptions,
-        List<CommentDto> comments,
+        List<UserActivityCommentResponse> comments,
         List<UserActivityCommentLikeResponse> commentLikes,
         List<ArticleViewDto> articleViews
 ) {
