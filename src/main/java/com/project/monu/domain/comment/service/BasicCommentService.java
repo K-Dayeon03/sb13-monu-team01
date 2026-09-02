@@ -91,14 +91,9 @@ public class BasicCommentService implements CommentService {
 
     @Transactional
     @Override
-    public void delete(UUID commentId, UUID requestUserId) {
+    public void delete(UUID commentId) {
         Comment comment = getActiveComment(commentId);
 
-        if (!comment.getUser().getId().equals(requestUserId)) {
-            throw new BusinessException(ErrorCode.COMMENT_ACCESS_DENIED);
-        }
-
-        // 댓글 목록에서는 숨기되 관련 이력은 유지하고, 기사 정렬용 댓글 수만 동기화합니다.
         comment.delete();
         comment.getArticle().decreaseCommentCount();
     }

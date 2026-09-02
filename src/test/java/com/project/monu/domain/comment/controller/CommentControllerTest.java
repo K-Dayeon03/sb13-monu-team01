@@ -167,14 +167,12 @@ class CommentControllerTest {
     void 댓글을_논리_삭제한다() throws Exception {
         // given
         UUID commentId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
 
         // when & then
-        mockMvc.perform(delete("/api/comments/{commentId}", commentId)
-                        .header(RequestHeaders.REQUEST_USER_ID, userId.toString()))
+        mockMvc.perform(delete("/api/comments/{commentId}", commentId))
                 .andExpect(status().isNoContent());
 
-        verify(commentService).delete(commentId, userId);
+        verify(commentService).delete(commentId);
     }
 
     @Test
