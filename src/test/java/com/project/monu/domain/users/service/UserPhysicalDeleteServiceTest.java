@@ -9,12 +9,15 @@ import com.project.monu.domain.notification.repository.NotificationRepository;
 import com.project.monu.domain.useractivity.repository.UserActivityMongoRepository;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
+import com.project.monu.global.exception.BusinessException;
+import com.project.monu.global.exception.ErrorCode;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -103,5 +106,33 @@ class UserPhysicalDeleteServiceTest {
     userPhysicalDeleteService.hardDelete(userId);
 
     verify(userRepository).delete(user);
+  }
+
+  @Test
+  void 사용자_물리_삭제시_요청자와_삭제대상이_다르면_삭제에_실패한다() {
+    UUID userId = UUID.randomUUID();
+    UUID requestUserId = UUID.randomUUID();
+
+    assertThatThrownBy(() ->
+        userPhysicalDeleteService.hardDelete(userId, requestUserId)
+    )
+        .isInstanceOf(BusinessException.class)
+        .extracting("errorCode")
+        .isEqualTo(ErrorCode.USER_DELETE_ACCESS_DENIED);
+  }
+
+  @Test
+  void 사용자_물리_삭제시_사용자정보가_없으면_삭제에_실패한다() {
+    UUID userId = UUID.randomUUID();
+
+    when(userRepository.findById(userId))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() ->
+        userPhysicalDeleteService.hardDelete(userId, userId)
+    )
+        .isInstanceOf(BusinessException.class)
+        .extracting("errorCode")
+        .isEqualTo(ErrorCode.USER_NOT_FOUND);
   }
 }
