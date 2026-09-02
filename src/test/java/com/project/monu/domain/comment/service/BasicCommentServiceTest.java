@@ -219,19 +219,15 @@ class BasicCommentServiceTest {
     void 댓글을_논리_삭제한다() {
         // given
         UUID commentId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
 
         Comment comment = mock(Comment.class);
         Article article = mock(Article.class);
-        User user = mock(User.class);
 
         when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
-        when(comment.getUser()).thenReturn(user);
         when(comment.getArticle()).thenReturn(article);
-        when(user.getId()).thenReturn(userId);
 
         // when
-        commentService.delete(commentId, userId);
+        commentService.delete(commentId);
 
         // then
         verify(comment).delete();
@@ -242,39 +238,15 @@ class BasicCommentServiceTest {
     void 댓글이_없으면_삭제에_실패한다() {
         // given
         UUID commentId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
 
         when(commentRepository.findById(commentId)).thenReturn(Optional.empty());
 
         // when
         BusinessException exception = catchThrowableOfType(BusinessException.class,
-                () -> commentService.delete(commentId, userId));
+                () -> commentService.delete(commentId));
 
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_NOT_FOUND);
-    }
-
-    @Test
-    void 작성자가_아니면_댓글_삭제에_실패한다() {
-        // given
-        UUID commentId = UUID.randomUUID();
-        UUID writerId = UUID.randomUUID();
-        UUID requestUserId = UUID.randomUUID();
-
-        Comment comment = mock(Comment.class);
-        User user = mock(User.class);
-
-        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
-        when(comment.getUser()).thenReturn(user);
-        when(user.getId()).thenReturn(writerId);
-
-        // when
-        BusinessException exception = catchThrowableOfType(BusinessException.class,
-                () -> commentService.delete(commentId, requestUserId));
-
-        // then
-        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_ACCESS_DENIED);
-        verify(comment, never()).delete();
     }
 
     @Test

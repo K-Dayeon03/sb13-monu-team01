@@ -69,11 +69,8 @@ public class CommentController {
     }
 
     @DeleteMapping("/{commentId}")
-    public ResponseEntity<Void> delete(
-            @PathVariable UUID commentId,
-            @RequestHeader(RequestHeaders.REQUEST_USER_ID) UUID requestUserId
-    ) {
-        commentService.delete(commentId, requestUserId);
+    public ResponseEntity<Void> delete(@PathVariable UUID commentId) {
+        commentService.delete(commentId);
 
         return ResponseEntity.noContent().build();
     }
