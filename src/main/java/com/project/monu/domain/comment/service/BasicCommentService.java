@@ -23,6 +23,7 @@ import com.project.monu.global.dto.CursorPageResponse;
 import com.project.monu.global.exception.BusinessException;
 import com.project.monu.global.exception.ErrorCode;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
@@ -155,8 +156,12 @@ public class BasicCommentService implements CommentService {
             throw new BusinessException(ErrorCode.COMMENT_LIKE_ALREADY_EXISTS);
         }
 
-        CommentLike commentLike = new CommentLike(comment, user);
-        CommentLike savedLike = commentLikeRepository.save(commentLike);
+        CommentLike savedLike;
+        try {
+            savedLike = commentLikeRepository.saveAndFlush(new CommentLike(comment, user));
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.COMMENT_LIKE_ALREADY_EXISTS);
+        }
 
         long likeCount = commentLikeRepository.countByComment_Id(commentId);
 

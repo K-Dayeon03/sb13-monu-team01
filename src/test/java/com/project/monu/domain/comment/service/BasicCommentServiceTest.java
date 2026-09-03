@@ -36,6 +36,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -513,7 +514,7 @@ class BasicCommentServiceTest {
         when(savedLike.getId()).thenReturn(likeId);
         when(savedLike.getCreatedAt()).thenReturn(likeCreatedAt);
 
-        when(commentLikeRepository.save(any(CommentLike.class))).thenReturn(savedLike);
+        when(commentLikeRepository.saveAndFlush(any(CommentLike.class))).thenReturn(savedLike);
         when(commentLikeRepository.countByComment_Id(commentId)).thenReturn(1L);
 
         // when
@@ -531,7 +532,7 @@ class BasicCommentServiceTest {
         assertThat(result.commentLikeCount()).isEqualTo(1L);
         assertThat(result.commentCreatedAt()).isEqualTo(commentCreatedAt);
 
-        verify(commentLikeRepository).save(any(CommentLike.class));
+        verify(commentLikeRepository).saveAndFlush(any(CommentLike.class));
     }
 
     @Test
@@ -596,7 +597,7 @@ class BasicCommentServiceTest {
 
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_LIKE_ALREADY_EXISTS);
-        verify(commentLikeRepository, never()).save(any(CommentLike.class));
+        verify(commentLikeRepository, never()).saveAndFlush(any(CommentLike.class));
     }
 
     @Test
@@ -698,9 +699,7 @@ class BasicCommentServiceTest {
 
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_NOT_FOUND);
-        verifyNoInteractions(commentLikeRepository);
-        verify(notificationRepository).deleteAllByResourceTypeAndResourceIdIn(
-                NotificationResourceType.COMMENT, List.of(commentId));
+        verifyNoInteractions(commentLikeRepository, notificationRepository);
     }
 
     @Test
@@ -757,7 +756,7 @@ class BasicCommentServiceTest {
         when(requestUser.getNickname()).thenReturn("좋아요누른사람");
         when(article.getId()).thenReturn(articleId);
 
-        when(commentLikeRepository.save(any(CommentLike.class))).thenReturn(savedLike);
+        when(commentLikeRepository.saveAndFlush(any(CommentLike.class))).thenReturn(savedLike);
 
         // when
         commentService.like(commentId, requestUserId);
@@ -770,4 +769,31 @@ class BasicCommentServiceTest {
                 commentId
         ));
     }
+
+    @Test
+    void 좋아요_저장_중_제약_위반이_발생하면_중복_예외로_변환한다() {
+        // given
+        UUID commentId = UUID.randomUUID();
+        UUID requestUserId = UUID.randomUUID();
+
+        Comment comment = mock(Comment.class);
+        User requestUser = mock(User.class);
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        when(comment.getDeletedAt()).thenReturn(null);
+        when(userRepository.findById(requestUserId)).thenReturn(Optional.of(requestUser));
+        when(commentLikeRepository.existsByComment_IdAndLikedBy_Id(commentId, requestUserId))
+                .thenReturn(false);
+        when(commentLikeRepository.saveAndFlush(any(CommentLike.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        // when
+        BusinessException exception = catchThrowableOfType(
+                BusinessException.class, () -> commentService.like(commentId, requestUserId)
+        );
+
+        // then
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_LIKE_ALREADY_EXISTS);
+    }
+
 }
