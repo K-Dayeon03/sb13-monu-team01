@@ -11,7 +11,7 @@ if [ -f "${ENV_FILE}" ]; then
 fi
 
 PORT="${SERVER_PORT:-8080}"
-HEALTH_URL="http://127.0.0.1:${PORT}/health"
+HEALTH_URL="http://127.0.0.1:${PORT}/actuator/health"
 MAX_ATTEMPTS=40
 SLEEP_SECONDS=3
 
