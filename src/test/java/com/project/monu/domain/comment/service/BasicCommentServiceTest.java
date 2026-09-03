@@ -19,6 +19,8 @@ import com.project.monu.domain.comment.entity.CommentLike;
 import com.project.monu.domain.comment.repository.CommentLikeRepository;
 import com.project.monu.domain.comment.repository.CommentQueryResult;
 import com.project.monu.domain.comment.repository.CommentRepository;
+import com.project.monu.domain.notification.entity.NotificationResourceType;
+import com.project.monu.domain.notification.repository.NotificationRepository;
 import com.project.monu.domain.notification.event.CommentLikedEvent;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
@@ -57,6 +59,9 @@ class BasicCommentServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private NotificationRepository notificationRepository;
 
     @Test
     void 댓글을_등록한다() {
@@ -656,6 +661,8 @@ class BasicCommentServiceTest {
         verify(commentLikeRepository).deleteAllByComment_Id(commentId);
         verify(commentRepository).delete(comment);
         verify(article).decreaseCommentCount();
+        verify(notificationRepository).deleteAllByResourceTypeAndResourceIdIn(
+                NotificationResourceType.COMMENT, List.of(commentId));
     }
 
     @Test
@@ -692,6 +699,8 @@ class BasicCommentServiceTest {
         // then
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COMMENT_NOT_FOUND);
         verifyNoInteractions(commentLikeRepository);
+        verify(notificationRepository).deleteAllByResourceTypeAndResourceIdIn(
+                NotificationResourceType.COMMENT, List.of(commentId));
     }
 
     @Test

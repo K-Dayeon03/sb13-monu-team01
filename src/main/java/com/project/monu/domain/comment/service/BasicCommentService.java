@@ -14,7 +14,9 @@ import com.project.monu.domain.comment.exception.InvalidCommentSortDirectionExce
 import com.project.monu.domain.comment.repository.CommentLikeRepository;
 import com.project.monu.domain.comment.repository.CommentQueryResult;
 import com.project.monu.domain.comment.repository.CommentRepository;
+import com.project.monu.domain.notification.entity.NotificationResourceType;
 import com.project.monu.domain.notification.event.CommentLikedEvent;
+import com.project.monu.domain.notification.repository.NotificationRepository;
 import com.project.monu.domain.users.entity.User;
 import com.project.monu.domain.users.repository.UserRepository;
 import com.project.monu.global.dto.CursorPageResponse;
@@ -39,6 +41,7 @@ public class BasicCommentService implements CommentService {
     private final ArticleRepository articleRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationRepository notificationRepository;
 
     @Transactional
     @Override
@@ -112,6 +115,8 @@ public class BasicCommentService implements CommentService {
             comment.getArticle().decreaseCommentCount();
         }
 
+        notificationRepository.deleteAllByResourceTypeAndResourceIdIn(
+                NotificationResourceType.COMMENT, List.of(commentId));
         commentLikeRepository.deleteAllByComment_Id(commentId);
         commentRepository.delete(comment);
     }
@@ -124,6 +129,13 @@ public class BasicCommentService implements CommentService {
         comments.stream()
                 .filter(comment -> comment.getDeletedAt() == null)
                 .forEach(comment -> comment.getArticle().decreaseCommentCount());
+
+        List<UUID> commentIds = comments.stream().map(Comment::getId).toList();
+
+        if (!commentIds.isEmpty()) {
+            notificationRepository.deleteAllByResourceTypeAndResourceIdIn(
+                    NotificationResourceType.COMMENT, commentIds);
+        }
 
         commentLikeRepository.deleteAllByComment_User_Id(userId);
         commentLikeRepository.deleteAllByLikedBy_Id(userId);
