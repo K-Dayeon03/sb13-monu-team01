@@ -284,10 +284,6 @@ class BasicCommentServiceTest {
         UUID requestUserId = UUID.randomUUID();
         Instant createdAt = Instant.parse("2026-08-24T00:00:00Z");
 
-        Comment comment = mock(Comment.class);
-        Article article = mock(Article.class);
-        User user = mock(User.class);
-
         CommentSearchCondition condition = new CommentSearchCondition(
                 articleId,
                 CommentSortType.CREATED_AT,
@@ -298,18 +294,13 @@ class BasicCommentServiceTest {
                 requestUserId
         );
 
-        CommentQueryResult queryResult = new CommentQueryResult(comment, 0L, false);
+        CommentQueryResult queryResult = new CommentQueryResult(
+                commentId, articleId, userId, "댓글테스터",
+                "댓글 내용입니다.", 0L, false, createdAt
+        );
 
         when(commentRepository.searchByCursor(condition)).thenReturn(List.of(queryResult));
         when(commentRepository.countByCondition(condition)).thenReturn(1L);
-        when(comment.getId()).thenReturn(commentId);
-        when(comment.getArticle()).thenReturn(article);
-        when(comment.getUser()).thenReturn(user);
-        when(comment.getContent()).thenReturn("댓글 내용입니다.");
-        when(comment.getCreatedAt()).thenReturn(createdAt);
-        when(article.getId()).thenReturn(articleId);
-        when(user.getId()).thenReturn(userId);
-        when(user.getNickname()).thenReturn("댓글테스터");
 
         // when
         CursorPageResponse<CommentDto> result =
@@ -339,16 +330,13 @@ class BasicCommentServiceTest {
         UUID userId = UUID.randomUUID();
         UUID requestUserId = UUID.randomUUID();
 
-        Comment first = mock(Comment.class);
-        Comment second = mock(Comment.class);
-        Comment third = mock(Comment.class);
-        Article article = mock(Article.class);
-        User user = mock(User.class);
-
         UUID firstId = UUID.randomUUID();
         UUID secondId = UUID.randomUUID();
+        UUID thirdId = UUID.randomUUID();
         Instant firstCreatedAt = Instant.parse("2026-08-24T03:00:00Z");
         Instant secondCreatedAt = Instant.parse("2026-08-24T02:00:00Z");
+        Instant thirdCreatedAt = Instant.parse("2026-08-24T01:00:00Z");
+
         CommentSearchCondition condition = new CommentSearchCondition(
                 articleId,
                 CommentSortType.CREATED_AT,
@@ -360,27 +348,14 @@ class BasicCommentServiceTest {
         );
 
         when(commentRepository.searchByCursor(condition)).thenReturn(List.of(
-                new CommentQueryResult(first, 1L, false),
-                new CommentQueryResult(second, 2L, true),
-                new CommentQueryResult(third, 0L, false)
+                new CommentQueryResult(firstId, articleId, userId, "댓글테스터",
+                        "첫 번째 댓글", 1L, false, firstCreatedAt),
+                new CommentQueryResult(secondId, articleId, userId, "댓글테스터",
+                        "두 번째 댓글", 2L, true, secondCreatedAt),
+                new CommentQueryResult(thirdId, articleId, userId, "댓글테스터",
+                        "세 번째 댓글", 0L, false, thirdCreatedAt)
         ));
         when(commentRepository.countByCondition(condition)).thenReturn(3L);
-
-        when(article.getId()).thenReturn(articleId);
-        when(user.getId()).thenReturn(userId);
-        when(user.getNickname()).thenReturn("댓글테스터");
-
-        when(first.getId()).thenReturn(firstId);
-        when(first.getArticle()).thenReturn(article);
-        when(first.getUser()).thenReturn(user);
-        when(first.getContent()).thenReturn("첫 번째 댓글");
-        when(first.getCreatedAt()).thenReturn(firstCreatedAt);
-
-        when(second.getId()).thenReturn(secondId);
-        when(second.getArticle()).thenReturn(article);
-        when(second.getUser()).thenReturn(user);
-        when(second.getContent()).thenReturn("두 번째 댓글");
-        when(second.getCreatedAt()).thenReturn(secondCreatedAt);
 
         // when
         CursorPageResponse<CommentDto> result =
@@ -403,10 +378,6 @@ class BasicCommentServiceTest {
         UUID requestUserId = UUID.randomUUID();
         Instant createdAt = Instant.parse("2026-08-24T00:00:00Z");
 
-        Comment comment = mock(Comment.class);
-        Article article = mock(Article.class);
-        User user = mock(User.class);
-
         CommentSearchCondition condition = new CommentSearchCondition(
                 articleId,
                 CommentSortType.LIKE_COUNT,
@@ -418,17 +389,11 @@ class BasicCommentServiceTest {
         );
 
         when(commentRepository.searchByCursor(condition))
-                .thenReturn(List.of(new CommentQueryResult(comment, 3L, true)));
+                .thenReturn(List.of(new CommentQueryResult(
+                        commentId, articleId, userId, "댓글테스터",
+                        "좋아요가 있는 댓글", 3L, true, createdAt
+                )));
         when(commentRepository.countByCondition(condition)).thenReturn(1L);
-
-        when(comment.getId()).thenReturn(commentId);
-        when(comment.getArticle()).thenReturn(article);
-        when(comment.getUser()).thenReturn(user);
-        when(comment.getContent()).thenReturn("좋아요가 있는 댓글");
-        when(comment.getCreatedAt()).thenReturn(createdAt);
-        when(article.getId()).thenReturn(articleId);
-        when(user.getId()).thenReturn(userId);
-        when(user.getNickname()).thenReturn("댓글테스터");
 
         // when
         CursorPageResponse<CommentDto> result =

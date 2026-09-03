@@ -241,20 +241,16 @@ public class BasicCommentService implements CommentService {
                 .toList();
 
         List<CommentDto> content = pageResults.stream()
-                .map(result -> {
-                    Comment comment = result.comment();
-
-                    return new CommentDto(
-                            comment.getId(),
-                            comment.getArticle().getId(),
-                            comment.getUser().getId(),
-                            comment.getUser().getNickname(),
-                            comment.getContent(),
-                            result.likeCount(),
-                            result.likedByMe(),
-                            comment.getCreatedAt()
-                    );
-                })
+                .map(result -> new CommentDto(
+                        result.id(),
+                        result.articleId(),
+                        result.userId(),
+                        result.userNickname(),
+                        result.content(),
+                        result.likeCount(),
+                        result.likedByMe(),
+                        result.createdAt()
+                ))
                 .toList();
 
         long totalElements = commentRepository.countByCondition(condition);
@@ -266,7 +262,7 @@ public class BasicCommentService implements CommentService {
             CommentQueryResult lastResult = pageResults.get(pageResults.size() - 1);
 
             nextCursor = createNextCursor(lastResult, sortType);
-            nextAfter = lastResult.comment().getCreatedAt();
+            nextAfter = lastResult.createdAt();
         }
 
         return CursorPageResponse.of(
@@ -291,11 +287,11 @@ public class BasicCommentService implements CommentService {
             CommentSortType sortType
     ) {
         String value = switch (sortType) {
-            case CREATED_AT -> result.comment().getCreatedAt().toString();
+            case CREATED_AT -> result.createdAt().toString();
             case LIKE_COUNT -> String.valueOf(result.likeCount());
         };
 
-        return value + "_" + result.comment().getId();
+        return value + "_" + result.id();
     }
 
 
